@@ -1,33 +1,81 @@
 #ifndef IMAGE_HPP
 #define IMAGE_HPP
 
-const char * const identifier = "david_a";
-// TODO
-const char * const informations = "C'est de la merde";
-
 #include <iostream>
+
+const char *const identifier = "david_a";
+
+const char *const informations = "";
+
+
+class GrayImage {
+public :
+    GrayImage() = delete;
+
+    GrayImage( uint16_t width, uint16_t height );
+
+    GrayImage( const GrayImage &src );
+
+    ~GrayImage();
+
+    GrayImage &operator=( const GrayImage & ) = delete;
+
+
+    uint16_t &getWidth() { return width_; }
+
+    uint16_t &getHeight() { return height_; }
+
+    uint8_t &pixel( uint16_t x, uint16_t y );
+
+    const uint8_t &pixel( uint16_t x, uint16_t y ) const;
+
+    void clear( uint8_t color );
+
+    void rectangle( uint16_t x, uint16_t y, uint16_t width, uint16_t height, uint8_t color );
+
+    void fillRectangle( uint16_t x, uint16_t y, uint16_t width, uint16_t height, uint8_t color );
+
+    // PGM a 2 formats le P2 et le P5, il faut donc différencier les deux
+    void writePGM( std::ostream &os ) const;
+
+    void writeTGA( std::ostream &os ) const;
+
+    void writeJPEG( std::ostream &os ) const;
+
+    static GrayImage *readPGM( std::istream &is );
+
+    static GrayImage *readTGA( std::istream &is );
+
+    static GrayImage *readJPEG( std::istream &is );
+
+private :
+    uint16_t width_;
+    uint16_t height_;
+    uint8_t *pixels;
+    uint8_t intensity;
+};
 
 class ColorImage {
 public :
-  void readPPM( std::istream& is );
+    void readPPM( std::istream &is );
 
-  ColorImage* writePPM( std::ostream& os ) const;
+    ColorImage *writePPM( std::ostream &os ) const;
 
-  void readTGA( std::istream& is );
+    void readTGA( std::istream &is );
 
-  ColorImage* writeTGA( std::ostream& os, bool ) const;
+    ColorImage *writeTGA( std::ostream &os ) const;
 
 
 };
 
 class Color {
 public :
-  Color( int r, int g, int b );
+    Color( int r, int g, int b );
 
 private :
-  int r;
-  int g;
-  int b;
+    int r;
+    int g;
+    int b;
 };
 
 
