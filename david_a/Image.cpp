@@ -5,6 +5,8 @@
 #include <stdexcept>
 #include <cstdint>
 #include <limits>
+#include <algorithm>
+
 
 
 static void skip_comments( std::istream &is ) {
@@ -41,7 +43,7 @@ static uint16_t isGoodWidth( std::istream &is, const uint16_t limit ) {
         throw invalidWidth( "Bad width of Image" );
     }
 
-    return width;
+    return static_cast<uint16_t>(width);
 }
 
 static uint16_t isGoodHeight( std::istream &is, const uint16_t limit ) {
@@ -55,7 +57,7 @@ static uint16_t isGoodHeight( std::istream &is, const uint16_t limit ) {
         throw invalidHeight( "Bad width of Image" );
     }
 
-    return height;
+    return static_cast<uint16_t>(height);
 }
 
 static uint8_t isGoodIntensity( std::istream &is, const uint8_t limit ) {
@@ -69,13 +71,104 @@ static uint8_t isGoodIntensity( std::istream &is, const uint8_t limit ) {
         throw invalidIntensity( "Bad intensity of Image" );
     }
 
-    return intensity;
+    return static_cast<uint8_t>(intensity);
 }
 
 static GrayImage* createGrayImage(const uint16_t width, const uint16_t height) {
     return new GrayImage(width, height);
 }
 
+static void isGoodPosition( const uint16_t x, const uint16_t limit ) {
+    using invalidPosition = std::invalid_argument;
+
+    if ( limit <= x ) {
+        throw invalidPosition("The given position is invalid");
+    }
+}
+
+static void drawHorizontalLine( GrayImage& image, uint16_t x, const uint16_t y, const uint16_t length, const uint8_t color ) {
+    for ( ; x < length; ++x) {
+        image.pixel(x, y) = color;
+    }
+}
+
+static void drawVertcalLine( GrayImage& image, const uint16_t x, uint16_t y, const uint16_t length, const uint8_t color ) {
+    for ( ; y < length; ++y) {
+	    image.pixel(x, y) = color;
+    }
+}
+
+// Définition of GrayImage's methods
+
+GrayImage::GrayImage(const uint16_t width, const uint16_t height)
+: width_(width), height_(height) {
+      pixels = new uint8_t[width * height];
+}
+
+GrayImage::GrayImage(const GrayImage& src)
+{
+    if ( (src.width_ != width_) || (src.height_ != height_) ) {
+        delete[] pixels;
+
+        pixels = new uint8_t[src.width_ * src.height_];
+    }
+
+    width_ = src.width_;
+    height_ = src.height_;
+
+    for( std::size_t i = 0; i < (width_ * height_); ++i ) {
+        pixels[i] = src.pixels[i];
+    }
+}
+
+GrayImage::~GrayImage() {
+  delete[] pixels;
+}
+
+
+uint8_t& GrayImage::pixel(const uint16_t x, const uint16_t y) {
+    ::isGoodPosition(x, getWidth());
+    ::isGoodPosition(y, getHeight());
+
+    return pixels[(height_ * y) + x];
+}
+
+const uint8_t& GrayImage::pixel(const uint16_t x, const uint16_t y) const {
+    ::isGoodPosition(x, getWidth());
+    ::isGoodPosition(y, getHeight());
+
+    return pixels[(height_ * y) + x];
+}
+
+
+void GrayImage::clear( const uint8_t color ) {
+    using Iterator = const std::iterator<std::forward_iterator_tag, uint8_t>::pointer;
+    Iterator first = pixels;
+    Iterator end = pixels + (width_ * height_);
+
+    std::fill(first, end, color);
+}
+
+void GrayImage::rectangle( const uint16_t x, const uint16_t y,
+                          const uint16_t width, const uint16_t height,
+                          const uint8_t color) {
+    ::drawHorizontalLine(*this, x, y, width, color);
+    ::drawHorizontalLine(*this, x, y+height, width, color);
+
+    ::drawVertcalLine( *this, x, y, height, color);
+    ::drawVertcalLine( *this, x+width, y, height, color);
+}
+
+void GrayImage::fillRectangle( const uint16_t x, uint16_t y,
+                               const uint16_t width, const uint16_t height,
+                               const uint8_t color ) {
+    for ( ; y < height; ++y ) {
+        ::drawHorizontalLine( *this, x, y, width, color);
+    }
+}
+
+
+// P2
 void GrayImage::writePGM( std::ostream &os ) const {
     const uint16_t pgm_limit_char = 70;
 
@@ -91,6 +184,7 @@ void GrayImage::writePGM( std::ostream &os ) const {
     os.flush();
 }
 
+// P5
 GrayImage *GrayImage::readPGM( std::istream &is ) {
     ::isGoodFormat( is, "P5" );
 
@@ -103,10 +197,9 @@ GrayImage *GrayImage::readPGM( std::istream &is ) {
 
     const auto intensity = ::isGoodIntensity( is, std::numeric_limits<uint8_t>::max() );
 
-    GrayImage* image = ::createGrayImage( width, height);
+    GrayImage* image = ::createGrayImage(width, height);
 
-    // A corriger
-    is.read( reinterpret_cast<char*>(image->pixels), image->getWidth() * image->getHeight());
+    is.read( reinterpret_cast<char*>(image->pixels), sizeof(pixels));
 
     return image;
 }
