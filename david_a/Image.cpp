@@ -87,13 +87,13 @@ static void isGoodPosition( const uint16_t x, const uint16_t limit ) {
 }
 
 static void drawHorizontalLine( GrayImage& image, uint16_t x, const uint16_t y, const uint16_t length, const uint8_t color ) {
-    for ( ; x < length; ++x) {
+    for ( ; x < (x+length); ++x) {
         image.pixel(x, y) = color;
     }
 }
 
 static void drawVertcalLine( GrayImage& image, const uint16_t x, uint16_t y, const uint16_t length, const uint8_t color ) {
-    for ( ; y < length; ++y) {
+    for ( ; y < (y+length); ++y) {
 	    image.pixel(x, y) = color;
     }
 }
@@ -162,7 +162,7 @@ void GrayImage::rectangle( const uint16_t x, const uint16_t y,
 void GrayImage::fillRectangle( const uint16_t x, uint16_t y,
                                const uint16_t width, const uint16_t height,
                                const uint8_t color ) {
-    for ( ; y < height; ++y ) {
+    for ( ; y < (y+height); ++y ) {
         ::drawHorizontalLine( *this, x, y, width, color);
     }
 }
