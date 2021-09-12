@@ -131,6 +131,17 @@ static uint8_t readGoodValue( std::istream& is, const uint8_t limit ) {
     return value;
 }
 
+static void isGoodGrayShade( const uint8_t* pixels, const uint8_t limit, const uint16_t length ) {
+    using badValueOfGrayShade = std::runtime_error;
+
+    for ( uint16_t i = 0; i < length; ++i ) {
+        if ( pixels[i] > limit ) {
+            throw badValueOfGrayShade("Bad value of gray shade at positon " + i);
+        }
+    }
+}
+
+
 
 // Définition of GrayImage's methods
 
@@ -203,16 +214,6 @@ void GrayImage::fillRectangle( const uint16_t x, uint16_t y,
 
 
 
-static void isGoodGrayShade( const uint8_t* pixels, const uint8_t limit, const uint16_t length ) {
-    using badValueOfGrayShade = std::runtime_error;
-
-    for ( uint16_t i = 0; i < length; ++i ) {
-        if ( pixels[i] > limit ) {
-            throw badValueOfGrayShade("Bad value of gray shade at positon " + i);
-        }
-    }
-}
-
 // P2
 /*
 void GrayImage::writePGM( std::ostream &os ) const {
@@ -274,8 +275,8 @@ GrayImage* GrayImage::readPGM( std::istream& is ) {
     return image;
 }
 */
-// P5
 
+// P5
 GrayImage *GrayImage::readPGM( std::istream &is ) {
     ::isGoodFormat( is, "P5" );
 
