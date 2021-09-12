@@ -2,7 +2,7 @@
 #define IMAGE_HPP
 
 // Options de correction
-// #define CORR_PGMASCII //P2
+// #define CORR_PGMASCII //P2 //Try
 // #define CORR_PPMASCII //P3
 // #define CORR_READCOLORJPEG
 // #define CORR_WRITECOLORJPEG
@@ -53,7 +53,7 @@ public:
 private:
   uint16_t width_;
   uint16_t height_;
-  uint8_t intensity;
+  uint8_t intensity_;
 
   uint8_t *pixels{nullptr};
 };

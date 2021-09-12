@@ -8,7 +8,6 @@
 #include <algorithm>
 
 
-
 static void skip_comments( std::istream &is ) {
     while ( '#' == is.peek() ) {
         is.ignore();
@@ -98,6 +97,41 @@ static void drawVertcalLine( GrayImage& image, const uint16_t x, uint16_t y, con
     }
 }
 
+static void noData( std::istream& is ) {
+    using alwaysData = std::runtime_error;
+
+    if ( !(is.eof()) ) {
+        throw alwaysData("Input stream always contain data");
+    }
+}
+
+using invalidValue = std::runtime_error;
+
+static uint8_t readGoodRawValue( std::istream& is, const uint8_t limit ) {
+    auto const value = new uint8_t[1];
+    *value = std::numeric_limits<uint8_t>::max();
+
+    is.read(reinterpret_cast<char*>(value), sizeof(uint8_t));
+
+    if ( limit > *value ) {
+        throw invalidValue("Redden value was over the given intensity");
+    }
+
+    return *value;
+}
+
+static uint8_t readGoodValue( std::istream& is, const uint8_t limit ) {
+    auto value = std::numeric_limits<uint8_t>::max();
+    is >> value;
+
+    if ( limit < value ) {
+        throw invalidValue("Redden value was over the given intensity");
+    }
+
+    return value;
+}
+
+
 // Définition of GrayImage's methods
 
 GrayImage::GrayImage(const uint16_t width, const uint16_t height)
@@ -168,23 +202,80 @@ void GrayImage::fillRectangle( const uint16_t x, uint16_t y,
 }
 
 
+
+static void isGoodGrayShade( const uint8_t* pixels, const uint8_t limit, const uint16_t length ) {
+    using badValueOfGrayShade = std::runtime_error;
+
+    for ( uint16_t i = 0; i < length; ++i ) {
+        if ( pixels[i] > limit ) {
+            throw badValueOfGrayShade("Bad value of gray shade at positon " + i);
+        }
+    }
+}
+
 // P2
+/*
 void GrayImage::writePGM( std::ostream &os ) const {
+    ::isGoodGrayShade(pixels, intensity_, width_ * height_);
+
     const uint16_t pgm_limit_char = 70;
 
-    os << "P2\n" << "# Image sauvegardée par " << ::identifier << '\n' << width_ << " " << height_ << " " << intensity
-       << '\n';
+    os << "P2\n" << "# Image sauvegardée par " << ::identifier << '\n'
+       << width_ << " " << height_ << '\n'
+       << intensity_ << '\n';
 
     for ( uint16_t i = 0; i < ( width_ * height_ ); ++i ) {
         if ( ( 0 != i ) && ::isEndOfLine( i, width_, pgm_limit_char ) ) { os << '\n'; }
 
-        os << pixels[i];
+        os << pixels[i] << " ";
     }
 
     os.flush();
 }
+*/
 
 // P5
+void GrayImage::writePGM( std::ostream& os ) const {
+    ::isGoodGrayShade(pixels, intensity_, width_ * height_);
+
+    os << "P5\n" << "# Image sauvegardée par " << ::identifier << '\n'
+       << width_ << " " << height_ << '\n'
+       << intensity_ << '\n';
+
+    os.write(reinterpret_cast<const char*>(pixels), sizeof(pixels));
+
+    os.flush();
+}
+
+// P2
+/*
+GrayImage* GrayImage::readPGM( std::istream& is ) {
+    ::isGoodFormat( is, "P2" );
+
+    ::skip_comments( is );
+
+    const auto width = ::isGoodWidth( is, std::numeric_limits<uint16_t>::max() );
+    const auto height = ::isGoodHeight( is, std::numeric_limits<uint16_t>::max() );
+
+    ::skip_comments( is );
+
+    const auto intensity = ::isGoodIntensity( is, std::numeric_limits<uint8_t>::max() );
+
+    GrayImage* image = ::createGrayImage(width, height);
+
+    for ( uint16_t i = 0; i < (width * height); ++i ) {
+        image->pixels[i] = ::readGoodValue(is, intensity);
+
+        //is >> image->pixels[i];
+    }
+
+    ::noData( is );
+
+    return image;
+}
+*/
+// P5
+
 GrayImage *GrayImage::readPGM( std::istream &is ) {
     ::isGoodFormat( is, "P5" );
 
@@ -199,7 +290,13 @@ GrayImage *GrayImage::readPGM( std::istream &is ) {
 
     GrayImage* image = ::createGrayImage(width, height);
 
-    is.read( reinterpret_cast<char*>(image->pixels), sizeof(pixels));
+    for ( uint16_t i = 0; i < (width * height); ++i ) {
+        image->pixels[i] = ::readGoodRawValue(is, intensity);
+    }
+
+    //is.read( reinterpret_cast<char*>(image->pixels), sizeof(pixels));
+
+    ::noData(is);
 
     return image;
 }
