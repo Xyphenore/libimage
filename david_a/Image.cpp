@@ -488,3 +488,32 @@ void ColorImage::fillRectangle( const uint16_t x, uint16_t y,
 
 Color::Color( const uint8_t r, const uint8_t g, const uint8_t b )
 : r_(r), g_(g), b_(b) {}
+
+
+GrayImage* GrayImage::simpleScale( const uint16_t width, const uint16_t height ) const {
+    auto image = new GrayImage( width, height );
+
+    for ( uint16_t y = 0; y < height; ++y ) {
+        for ( uint16_t x = 0; x < width; ++x ) {
+            image->pixel(x,y) = pixel(static_cast<uint16_t>(x * (width_ / width)),
+                                      static_cast<uint16_t>(y * (height_ / height))
+                                      );
+        }
+    }
+
+    return image;
+}
+
+ColorImage* ColorImage::simpleScale( const uint16_t width, const uint16_t height ) const {
+    auto image = new ColorImage( width, height );
+
+    for ( uint16_t y = 0; y < height; ++y ) {
+        for ( uint16_t x = 0; x < width; ++x ) {
+            image->pixel(x,y) = pixel(static_cast<uint16_t>(x * (width_ / width)),
+                                      static_cast<uint16_t>(y * (height_ / height))
+            );
+        }
+    }
+
+    return image;
+}
