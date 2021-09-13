@@ -7,6 +7,11 @@
 #include <limits>
 #include <algorithm>
 
+extern "C" {
+#include <jpeglib.h>
+}
+
+
 using alwaysData = std::runtime_error;
 using invalidValue = std::runtime_error;
 
