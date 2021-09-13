@@ -55,7 +55,7 @@ private:
   uint16_t height_;
   uint8_t intensity_;
 
-  uint8_t *pixels{nullptr};
+  uint8_t* pixels{nullptr};
 };
 
 inline const uint16_t& GrayImage::getWidth() const { return width_; }
@@ -63,25 +63,71 @@ inline const uint16_t& GrayImage::getHeight() const { return height_; }
 
 
 
-class ColorImage {
-public:
-  void readPPM(std::istream &is);
-
-  ColorImage *writePPM(std::ostream &os) const;
-
-  void readTGA(std::istream &is);
-
-  ColorImage *writeTGA(std::ostream &os) const;
-};
-
 class Color {
 public:
-  Color(int r, int g, int b);
+    Color() = default;
+    Color(uint8_t r, uint8_t g, uint8_t b);
 
-private:
-  int r;
-  int g;
-  int b;
+    uint8_t r_{ 0};
+    uint8_t g_{ 0};
+    uint8_t b_{ 0};
 };
+
+Color operator+( const Color& c1, const Color& c2 ) {
+    return { static_cast<uint8_t>(c1.r_ + c2.r_),
+             static_cast<uint8_t>(c1.g_ + c2.g_),
+             static_cast<uint8_t>(c1.b_ + c2.b_)
+    };
+}
+Color operator*( const double alpha, const Color& c ) {
+    return { static_cast<uint8_t>(c.r_ * alpha),
+             static_cast<uint8_t>(c.g_ * alpha),
+             static_cast<uint8_t>(c.b_ * alpha)
+    };
+}
+
+
+
+class ColorImage {
+public:
+    ColorImage() = delete;
+    ColorImage( uint16_t width, uint16_t height );
+    ColorImage(const ColorImage& src);
+    ~ColorImage();
+    ColorImage& operator=(const ColorImage& src) = delete;
+
+    const uint16_t& getWidth() const;
+    const uint16_t& getHeight() const;
+
+    Color& pixel(uint16_t x, uint16_t y);
+    const Color& pixel(uint16_t x, uint16_t y) const;
+
+    void clear(Color color);
+
+    void rectangle(uint16_t x, uint16_t y, uint16_t width, uint16_t height, Color color);
+    void fillRectangle(uint16_t x, uint16_t y, uint16_t width, uint16_t height, Color color);
+
+
+    static ColorImage* readPPM(std::istream &is);
+    static ColorImage* readTGA(std::istream &is);
+
+    void writePPM(std::ostream &os) const;
+    void writeTGA(std::ostream &os) const;
+
+private :
+    uint16_t width_;
+    uint16_t height_;
+    uint8_t intensity_;
+
+    Color* pixels {nullptr};
+};
+
+inline const uint16_t& ColorImage::getWidth() const { return width_; }
+inline const uint16_t& ColorImage::getHeight() const { return height_; }
+
+
+
+
+
 
 #endif // IMAGE_HPP
