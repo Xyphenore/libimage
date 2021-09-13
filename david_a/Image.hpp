@@ -107,6 +107,8 @@ public:
     void rectangle(uint16_t x, uint16_t y, uint16_t width, uint16_t height, Color color);
     void fillRectangle(uint16_t x, uint16_t y, uint16_t width, uint16_t height, Color color);
 
+    ColorImage* simpleScale(uint16_t w, uint16_t h) const;
+    ColorImage* bilinearScale(uint16_t w, uint16_t h) const;
 
     static ColorImage* readPPM(std::istream &is);
     static ColorImage* readTGA(std::istream &is);

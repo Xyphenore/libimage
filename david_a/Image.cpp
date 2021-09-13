@@ -265,11 +265,47 @@ void GrayImage::writePGM( std::ostream &os ) const {
 }
 */
 
+// P3
+/*
+void ColorImage::writePPM( std::ostream& os ) const {
+    ::isGoodColorPixel(pixels, intensity_, width_ * height_);
+
+    const uint16_t pgm_limit_char = 70;
+
+    os << "P3\n" << "# Image sauvegardée par " << ::identifier << '\n'
+       << width_ << " " << height_ << '\n'
+       << intensity_ << '\n';
+
+    for ( uint16_t i = 0; i < ( width_ * height_ ); ++i ) {
+        if ( ( 0 != i ) && ::isEndOfLine( i, width_, pgm_limit_char ) ) { os << '\n'; }
+
+        os << pixels[i].r_ << " "
+           << pixels[i].g_ << " "
+           << pixels[i].r_ << " ";
+    }
+
+    os.flush();
+}
+*/
+
 // P5
 void GrayImage::writePGM( std::ostream& os ) const {
     ::isGoodGrayPixel( pixels, intensity_, width_ * height_ );
 
     os << "P5\n" << "# Image sauvegardée par " << ::identifier << '\n'
+       << width_ << " " << height_ << '\n'
+       << intensity_ << '\n';
+
+    os.write(reinterpret_cast<const char*>(pixels), sizeof(pixels));
+
+    os.flush();
+}
+
+// P6
+void ColorImage::writePPM( std::ostream& os ) const {
+    ::isGoodColorPixel( pixels, intensity_, width_ * height_ );
+
+    os << "P6\n" << "# Image sauvegardée par " << ::identifier << '\n'
        << width_ << " " << height_ << '\n'
        << intensity_ << '\n';
 
@@ -306,6 +342,33 @@ GrayImage* GrayImage::readPGM( std::istream& is ) {
 }
 */
 
+// P3
+/*
+ColorImage* ColorImage::readPPM( std::istream& is ) {
+    ::isGoodFormat( is, "P3" );
+
+    ::skip_comments( is );
+
+    const auto width = ::isGoodWidth( is, std::numeric_limits<uint16_t>::max() );
+    const auto height = ::isGoodHeight( is, std::numeric_limits<uint16_t>::max() );
+
+    ::skip_comments( is );
+
+    const auto intensity = ::isGoodIntensity( is, std::numeric_limits<uint8_t>::max() );
+
+    ColorImage* image = ::createColorImage(width, height);
+
+    for ( uint16_t i = 0; i < (width * height); ++i ) {
+        image->pixels[i] = ::readGoodColorValue(is, intensity);
+
+        //is >> image->pixels[i];
+    }
+
+    ::noData( is );
+
+    return image;
+}
+*/
 // P5
 GrayImage *GrayImage::readPGM( std::istream &is ) {
     ::isGoodFormat( is, "P5" );
@@ -332,7 +395,6 @@ GrayImage *GrayImage::readPGM( std::istream &is ) {
     return image;
 }
 
-
 // P6
 ColorImage* ColorImage::readPPM( std::istream& is ) {
     ::isGoodFormat( is, "P6" );
@@ -355,18 +417,7 @@ ColorImage* ColorImage::readPPM( std::istream& is ) {
     return image;
 }
 
-// P6
-void ColorImage::writePPM( std::ostream& os ) const {
-    ::isGoodColorPixel( pixels, intensity_, width_ * height_ );
 
-    os << "P6\n" << "# Image sauvegardée par " << ::identifier << '\n'
-       << width_ << " " << height_ << '\n'
-       << intensity_ << '\n';
-
-    os.write(reinterpret_cast<const char*>(pixels), sizeof(pixels));
-
-    os.flush();
-}
 
 
 
