@@ -46,8 +46,13 @@ static void skip_comments( std::istream &is ) {
     }
 }
 
-static void skip_whitespace( std::istream& is ) {
-    const std::vector<char> whitespace({'\n', '\t', ' ', '\r', '\v', '\f'});
+static void skip_ONEwhitespace( std::istream& is ) {
+    const std::array<char,6> whitespace({ '\t', '\n', '\v',
+                                          '\f', '\r', ' '});
+
+    if ( std::binary_search(whitespace.begin(), whitespace.end(), is.peek()) ) {
+        is.get();
+    }
 }
 
 
@@ -55,7 +60,9 @@ static void skip_whitespace( std::istream& is ) {
 static bool isEndOfLine( const uint16_t pos, const uint16_t width, const uint16_t formatLimit ) {
     return ( 0 == ( pos % width ) ) || ( 0 == ( pos % formatLimit ) );
 }
-static void noData( const std::istream& is ) {
+static void noData( std::istream& is ) {
+    is.peek();
+
     if ( !(is.eof()) ) {
         throw alwaysData("Input stream always contain data");
     }
@@ -124,11 +131,11 @@ static void isGoodColorPixel( const Color* const pixels, const uint8_t limit, co
 }
 
 
-static GrayImage* createGrayImage(const uint16_t width, const uint16_t height) {
-    return new GrayImage(width, height);
+static GrayImage* createGrayImage(const uint16_t width, const uint16_t height, const uint8_t intensity) {
+    return new GrayImage(width, height, intensity);
 }
-static ColorImage* createColorImage( const uint16_t width, const uint16_t height ) {
-    return new ColorImage( width, height );
+static ColorImage* createColorImage( const uint16_t width, const uint16_t height, const uint8_t intensity) {
+    return new ColorImage( width, height, intensity);
 }
 
 
@@ -155,16 +162,15 @@ static void drawVerticalColorLine( ColorImage& image, const uint16_t x, uint16_t
 
 
 static uint8_t readGoodRawGrayValue( std::istream& is, const uint8_t limit ) {
-    uint8_t* const value = new uint8_t[1];
-    *value = std::numeric_limits<uint8_t>::max();
+    uint8_t value = std::numeric_limits<uint8_t>::max();
 
-    is.read(reinterpret_cast<char*>(value), sizeof(uint8_t));
+    is.read(reinterpret_cast<char*>(&value), sizeof(uint8_t));
 
-    if ( limit < *value ) {
+    if ( limit < value ) {
         throw invalidValue("Redden value was over the given intensity");
     }
 
-    return *value;
+    return value;
 }
 static uint8_t readGoodGrayValue( std::istream& is, const uint8_t limit ) {
     auto value = std::numeric_limits<uint8_t>::max();
@@ -205,6 +211,9 @@ static Color readGoodRawColorValue( std::istream& is, const uint8_t limit ) {
 
 GrayImage::GrayImage(const uint16_t width, const uint16_t height)
 : width_(width), height_(height), pixels(new uint8_t[width_ * height_]) {}
+
+GrayImage::GrayImage(const uint16_t width, const uint16_t height, const uint8_t intensity)
+: width_(width), height_(height), intensity_(intensity), pixels(new uint8_t[width_ * height_]) {}
 
 GrayImage::GrayImage(const GrayImage& src)
 : width_(src.width_), height_(src.height_)
@@ -395,28 +404,30 @@ ColorImage* ColorImage::readPPM( std::istream& is ) {
 */
 // P5
 GrayImage *GrayImage::readPGM( std::istream &is ) {
+    // NOTE : isGoodFormat( is, "PG") devra être renommé en CompareFormat
     ::isGoodFormat( is, "P5" );
 
     ::skip_comments( is );
 
-    std::cerr << "coucouc";
-
     const auto width = ::isGoodWidth( is, std::numeric_limits<uint16_t>::max() );
-    const auto height = ::isGoodHeight( is, std::numeric_limits<uint16_t>::max() );
 
-    std::cerr << "toi";
+    ::skip_comments( is );
+
+    const auto height = ::isGoodHeight( is, std::numeric_limits<uint16_t>::max() );
 
     ::skip_comments( is );
 
     const auto intensity = ::isGoodIntensity( is, std::numeric_limits<uint8_t>::max() );
 
-    GrayImage* const image = ::createGrayImage(width, height);
+    ::skip_ONEwhitespace(is);
 
-    for ( uint16_t i = 0; i < (width * height); ++i ) {
+    GrayImage* const image = ::createGrayImage(width, height, intensity);
+
+    for ( uint32_t i = 0; i < (width * height); ++i ) {
         image->pixels[i] = ::readGoodRawGrayValue( is, intensity );
     }
 
-    //is.read( reinterpret_cast<char*>(image->pixels), sizeof(pixels));
+    ::skip_ONEwhitespace(is);
 
     ::noData(is);
 
@@ -436,9 +447,9 @@ ColorImage* ColorImage::readPPM( std::istream& is ) {
 
     const auto intensity = ::isGoodIntensity( is, std::numeric_limits<uint8_t>::max() );
 
-    ColorImage* const image = ::createColorImage(width, height);
+    ColorImage* const image = ::createColorImage(width, height, intensity);
 
-    for ( uint16_t i = 0; i < (width * height); ++i ) {
+    for ( uint32_t i = 0; i < (width * height); ++i ) {
         image->pixels[i] = ::readGoodRawColorValue( is, intensity );
     }
 
@@ -451,6 +462,9 @@ ColorImage* ColorImage::readPPM( std::istream& is ) {
 
 ColorImage::ColorImage( const uint16_t width, const uint16_t height )
 : width_(width), height_(height), pixels(new Color[width_ * height_]) {}
+
+ColorImage::ColorImage( const uint16_t width, const uint16_t height, const uint8_t intensity )
+: width_(width), height_(height),intensity_(intensity), pixels(new Color[width_ * height_]) {}
 
 ColorImage::ColorImage(const ColorImage& src)
 : width_(src.width_), height_(src.height_)

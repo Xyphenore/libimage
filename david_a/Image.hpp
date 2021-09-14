@@ -11,6 +11,7 @@
 // #define CORR_TEMPLATE
 
 #include <iostream>
+#include <limits>
 
 const char *const identifier = "david_a";
 
@@ -20,6 +21,7 @@ class GrayImage {
 public:
     GrayImage() = delete;
     GrayImage(uint16_t width, uint16_t height);
+    GrayImage(uint16_t width, uint16_t height, uint8_t intensity);
     GrayImage(const GrayImage &src);
     ~GrayImage();
 
@@ -51,7 +53,7 @@ public:
 private:
     uint16_t width_;
     uint16_t height_;
-    uint8_t intensity_;
+    uint8_t intensity_{std::numeric_limits<uint8_t>::max()};
 
     uint8_t* pixels{nullptr};
 };
@@ -79,6 +81,7 @@ class ColorImage {
 public:
     ColorImage() = delete;
     ColorImage( uint16_t width, uint16_t height );
+    ColorImage( uint16_t width, uint16_t height, uint8_t intensity);
     ColorImage(const ColorImage& src);
     ~ColorImage();
     ColorImage& operator=(const ColorImage& src) = delete;
