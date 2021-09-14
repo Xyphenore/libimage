@@ -6,6 +6,8 @@
 #include <cstdint>
 #include <limits>
 #include <algorithm>
+#include <array>
+#include <vector>
 
 extern "C" {
 #include <jpeglib.h>
@@ -24,12 +26,30 @@ using invalidHeight = std::invalid_argument;
 using invalidIntensity = std::invalid_argument;
 using invalidPosition = std::invalid_argument;
 
+Color operator+( const Color& c1, const Color& c2 ) {
+    return { static_cast<uint8_t>(c1.r_ + c2.r_),
+             static_cast<uint8_t>(c1.g_ + c2.g_),
+             static_cast<uint8_t>(c1.b_ + c2.b_)
+    };
+}
+Color operator*( const double alpha, const Color& c ) {
+    return { static_cast<uint8_t>(c.r_ * alpha),
+             static_cast<uint8_t>(c.g_ * alpha),
+             static_cast<uint8_t>(c.b_ * alpha)
+    };
+}
+
 
 static void skip_comments( std::istream &is ) {
-    while ( '#' == is.peek() ) {
-        is.ignore();
+    while ( '#' == std::ws(is).peek() ) {
+        is.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
     }
 }
+
+static void skip_whitespace( std::istream& is ) {
+    const std::vector<char> whitespace({'\n', '\t', ' ', '\r', '\v', '\f'});
+}
+
 
 
 static bool isEndOfLine( const uint16_t pos, const uint16_t width, const uint16_t formatLimit ) {
@@ -187,12 +207,11 @@ GrayImage::GrayImage(const uint16_t width, const uint16_t height)
 : width_(width), height_(height), pixels(new uint8_t[width_ * height_]) {}
 
 GrayImage::GrayImage(const GrayImage& src)
+: width_(src.width_), height_(src.height_)
 {
-    if ( (src.width_ != width_) || (src.height_ != height_) ) {
-        delete[] pixels;
+    delete[] pixels;
 
-        pixels = new uint8_t[src.width_ * src.height_];
-    }
+    pixels = new uint8_t[src.width_ * src.height_];
 
     width_ = src.width_;
     height_ = src.height_;
@@ -380,8 +399,12 @@ GrayImage *GrayImage::readPGM( std::istream &is ) {
 
     ::skip_comments( is );
 
+    std::cerr << "coucouc";
+
     const auto width = ::isGoodWidth( is, std::numeric_limits<uint16_t>::max() );
     const auto height = ::isGoodHeight( is, std::numeric_limits<uint16_t>::max() );
+
+    std::cerr << "toi";
 
     ::skip_comments( is );
 
@@ -430,12 +453,12 @@ ColorImage::ColorImage( const uint16_t width, const uint16_t height )
 : width_(width), height_(height), pixels(new Color[width_ * height_]) {}
 
 ColorImage::ColorImage(const ColorImage& src)
+: width_(src.width_), height_(src.height_)
 {
-    if ( (src.width_ != width_) || (src.height_ != height_) ) {
-        delete[] pixels;
+    delete[] pixels;
 
-        pixels = new Color[src.width_ * src.height_];
-    }
+    pixels = new Color[src.width_ * src.height_];
+
 
     width_ = src.width_;
     height_ = src.height_;

@@ -71,18 +71,7 @@ public:
     uint8_t b_{ 0};
 };
 
-Color operator+( const Color& c1, const Color& c2 ) {
-    return { static_cast<uint8_t>(c1.r_ + c2.r_),
-             static_cast<uint8_t>(c1.g_ + c2.g_),
-             static_cast<uint8_t>(c1.b_ + c2.b_)
-    };
-}
-Color operator*( const double alpha, const Color& c ) {
-    return { static_cast<uint8_t>(c.r_ * alpha),
-             static_cast<uint8_t>(c.g_ * alpha),
-             static_cast<uint8_t>(c.b_ * alpha)
-    };
-}
+
 
 
 
@@ -106,13 +95,19 @@ public:
     void fillRectangle(uint16_t x, uint16_t y, uint16_t width, uint16_t height, Color color);
 
     ColorImage* simpleScale(uint16_t width, uint16_t height) const;
-    ColorImage* bilinearScale(uint16_t width, uint16_t height) const;
+    ColorImage* bilinearScale(uint16_t width, uint16_t height) const {
+        return new ColorImage(0,0);
+    };
 
     static ColorImage* readPPM(std::istream &is);
-    static ColorImage* readTGA(std::istream &is);
+    static ColorImage* readTGA(std::istream &is) {
+        return new ColorImage(0,0);
+    };
 
     void writePPM(std::ostream &os) const;
-    void writeTGA(std::ostream &os) const;
+    void writeTGA(std::ostream &os, bool compressed ) const {
+        return;
+    };
 
 private :
     uint16_t width_;

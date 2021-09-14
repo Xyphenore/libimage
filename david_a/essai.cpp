@@ -25,10 +25,14 @@ int main(int argc,char *argv[])
  cout << "Les informations que vous avez decide d'indiquer au correcteur : " << endl << informations << endl;
  try
   {
-   /*
-   Vous pouvez modifier l'intérieur de ce main() comme bon vous semble. Cette
-   fonction ne sera pas utilisée lors de la correction.
-   */
+   ifstream ifimage("../ressources/chat.pgm", ios::binary );
+
+   const GrayImage * const gray = GrayImage::readPGM(ifimage);
+
+   ofstream ofimg("../ressources/chatbis.pgm", ios::binary );
+   gray->writePGM(ofimg);
+
+
 
   } // Trois types d'exceptions seront attrapés (les chaines C et C++ ainsi que
     // les std::exception et toutes ses dérivées). N'utilisez pas autre chose !
