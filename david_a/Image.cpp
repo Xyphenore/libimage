@@ -327,11 +327,11 @@ void GrayImage::writePGM( std::ostream& os ) const {
 
     os << "P5\n" << "# Image sauvegardée par " << ::identifier << '\n'
        << width_ << " " << height_ << '\n'
-       << intensity_ << '\n';
+       << static_cast<uint16_t>(intensity_) << '\n';
 
-    os.write(reinterpret_cast<const char*>(pixels), sizeof(pixels));
+    os.write(reinterpret_cast<const char*>(pixels), static_cast<long>(width_ * height_) * sizeof(uint8_t));
 
-    os.flush();
+    os << '\n' << std::flush;
 }
 
 // P6

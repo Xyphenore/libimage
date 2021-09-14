@@ -11,7 +11,6 @@
 // #define CORR_TEMPLATE
 
 #include <iostream>
-#include <limits>
 
 const char *const identifier = "david_a";
 
@@ -53,7 +52,7 @@ public:
 private:
     uint16_t width_;
     uint16_t height_;
-    uint8_t intensity_{std::numeric_limits<uint8_t>::max()};
+    uint8_t intensity_{255};
 
     uint8_t* pixels{nullptr};
 };
