@@ -487,13 +487,13 @@ Color& ColorImage::pixel(const uint16_t x, const uint16_t y) {
     ::isGoodPosition(x, getWidth());
     ::isGoodPosition(y, getHeight());
 
-    return pixels[(height_ * y) + x];
+    return pixels[(width_ * y) + x];
 }
 const Color& ColorImage::pixel(const uint16_t x, const uint16_t y) const {
     ::isGoodPosition(x, getWidth());
     ::isGoodPosition(y, getHeight());
 
-    return pixels[(height_ * y) + x];
+    return pixels[(width_ * y) + x];
 }
 
 
