@@ -12,102 +12,123 @@
 
 #include <iostream>
 
-const char *const identifier = "david_a";
+const char* const identifier = "david_a";
 
-const char *const informations = "";
+const char* const informations = "";
 
 class GrayImage {
 public:
     GrayImage() = delete;
-    GrayImage(uint16_t width, uint16_t height);
-    GrayImage(uint16_t width, uint16_t height, uint8_t intensity);
-    GrayImage(const GrayImage &src);
+
+    GrayImage( uint16_t width, uint16_t height );
+
+    GrayImage( uint16_t width, uint16_t height, uint8_t intensity );
+
+    GrayImage( const GrayImage& src );
+
     ~GrayImage();
 
-    GrayImage &operator=(const GrayImage &) = delete;
+    GrayImage& operator=( const GrayImage& ) = delete;
 
     const uint16_t& getWidth() const;
+
     const uint16_t& getHeight() const;
 
-    uint8_t &pixel(uint16_t x, uint16_t y);
-    const uint8_t &pixel(uint16_t x, uint16_t y) const;
+    uint8_t& pixel( uint16_t x, uint16_t y );
 
-    void clear(uint8_t color);
+    const uint8_t& pixel( uint16_t x, uint16_t y ) const;
 
-    void rectangle(uint16_t x, uint16_t y, uint16_t width, uint16_t height, uint8_t color);
-    void fillRectangle(uint16_t x, uint16_t y, uint16_t width, uint16_t height, uint8_t color);
+    void clear( uint8_t color );
 
-    GrayImage* simpleScale(uint16_t width, uint16_t height) const;
-    GrayImage* bilinearScale(uint16_t width, uint16_t height) const;
+    void rectangle( uint16_t x, uint16_t y, uint16_t width, uint16_t height, uint8_t color );
+
+    void fillRectangle( uint16_t x, uint16_t y, uint16_t width, uint16_t height, uint8_t color );
+
+    GrayImage* simpleScale( uint16_t width, uint16_t height ) const;
+
+    GrayImage* bilinearScale( uint16_t width, uint16_t height ) const;
 
     // PGM a 2 formats le P2 et le P5, il faut donc différencier les deux
-    void writePGM(std::ostream &os) const;
-    void writeTGA(std::ostream &os) const;
-    void writeJPEG(std::ostream &os) const;
+    void writePGM( std::ostream& os ) const;
 
-    static GrayImage *readPGM(std::istream &is);
-    static GrayImage *readTGA(std::istream &is);
-    static GrayImage *readJPEG(std::istream &is);
+    void writeTGA( std::ostream& os ) const;
+
+    void writeJPEG( std::ostream& os ) const;
+
+    static GrayImage* readPGM( std::istream& is );
+
+    static GrayImage* readTGA( std::istream& is );
+
+    static GrayImage* readJPEG( std::istream& is );
 
 private:
     uint16_t width_;
     uint16_t height_;
-    uint8_t intensity_{255};
+    uint8_t intensity_{ 255 };
 
-    uint8_t* pixels{nullptr};
+    uint8_t* pixels{ nullptr };
 };
 
 inline const uint16_t& GrayImage::getWidth() const { return width_; }
-inline const uint16_t& GrayImage::getHeight() const { return height_; }
 
+inline const uint16_t& GrayImage::getHeight() const { return height_; }
 
 
 class Color {
 public:
     Color() = default;
-    Color(uint8_t r, uint8_t g, uint8_t b);
 
-    uint8_t r_{ 0};
-    uint8_t g_{ 0};
-    uint8_t b_{ 0};
+    Color( uint8_t r, uint8_t g, uint8_t b );
+
+    uint8_t r_{ 0 };
+    uint8_t g_{ 0 };
+    uint8_t b_{ 0 };
 };
-
-
-
 
 
 class ColorImage {
 public:
     ColorImage() = delete;
+
     ColorImage( uint16_t width, uint16_t height );
-    ColorImage( uint16_t width, uint16_t height, uint8_t intensity);
-    ColorImage(const ColorImage& src);
+
+    ColorImage( uint16_t width, uint16_t height, uint8_t intensity );
+
+    ColorImage( const ColorImage& src );
+
     ~ColorImage();
-    ColorImage& operator=(const ColorImage& src) = delete;
+
+    ColorImage& operator=( const ColorImage& src ) = delete;
 
     const uint16_t& getWidth() const;
+
     const uint16_t& getHeight() const;
 
-    Color& pixel(uint16_t x, uint16_t y);
-    const Color& pixel(uint16_t x, uint16_t y) const;
+    Color& pixel( uint16_t x, uint16_t y );
 
-    void clear(Color color);
+    const Color& pixel( uint16_t x, uint16_t y ) const;
 
-    void rectangle(uint16_t x, uint16_t y, uint16_t width, uint16_t height, Color color);
-    void fillRectangle(uint16_t x, uint16_t y, uint16_t width, uint16_t height, Color color);
+    void clear( Color color );
 
-    ColorImage* simpleScale(uint16_t width, uint16_t height) const;
-    ColorImage* bilinearScale(uint16_t width, uint16_t height) const {
-        return new ColorImage(0,0);
+    void rectangle( uint16_t x, uint16_t y, uint16_t width, uint16_t height, Color color );
+
+    void fillRectangle( uint16_t x, uint16_t y, uint16_t width, uint16_t height, Color color );
+
+    ColorImage* simpleScale( uint16_t width, uint16_t height ) const;
+
+    ColorImage* bilinearScale( uint16_t width, uint16_t height ) const {
+        return new ColorImage( 0, 0 );
     };
 
-    static ColorImage* readPPM(std::istream &is);
-    static ColorImage* readTGA(std::istream &is) {
-        return new ColorImage(0,0);
+    static ColorImage* readPPM( std::istream& is );
+
+    static ColorImage* readTGA( std::istream& is ) {
+        return new ColorImage( 0, 0 );
     };
 
-    void writePPM(std::ostream &os) const;
-    void writeTGA(std::ostream &os, bool compressed ) const {
+    void writePPM( std::ostream& os ) const;
+
+    void writeTGA( std::ostream& os, bool compressed ) const {
         return;
     };
 
@@ -116,15 +137,12 @@ private :
     uint16_t height_;
     uint8_t intensity_;
 
-    Color* pixels {nullptr};
+    Color* pixels{ nullptr };
 };
 
 inline const uint16_t& ColorImage::getWidth() const { return width_; }
+
 inline const uint16_t& ColorImage::getHeight() const { return height_; }
-
-
-
-
 
 
 #endif // IMAGE_HPP

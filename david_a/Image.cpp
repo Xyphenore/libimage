@@ -139,24 +139,24 @@ static ColorImage* createColorImage( const uint16_t width, const uint16_t height
 }
 
 
-static void drawHorizontalGrayLine( GrayImage& image, uint16_t x, const uint16_t y, const uint16_t length, const uint8_t color ) {
-    for ( ; x < (x+length); ++x) {
-        image.pixel(x, y) = color;
+static void drawHorizontalGrayLine( GrayImage& image, const uint16_t x, const uint16_t y, const uint16_t length, const uint8_t color ) {
+    for ( uint16_t  i = x; i < (x+length); ++i ) {
+        image.pixel(i, y) = color;
     }
 }
-static void drawVerticalGrayLine( GrayImage& image, const uint16_t x, uint16_t y, const uint16_t length, const uint8_t color ) {
-    for ( ; y < (y+length); ++y) {
-	    image.pixel(x, y) = color;
+static void drawVerticalGrayLine( GrayImage& image, const uint16_t x, const uint16_t y, const uint16_t length, const uint8_t color ) {
+    for ( uint16_t j = y; j < (y+length); ++j ) {
+	    image.pixel(x, j) = color;
     }
 }
-static void drawHorizontalColorLine( ColorImage& image, uint16_t x, const uint16_t y, const uint16_t length, const Color color ) {
-    for ( ; x < (x+length); ++x) {
-        image.pixel(x, y) = color;
+static void drawHorizontalColorLine( ColorImage& image, const uint16_t x, const uint16_t y, const uint16_t length, const Color color ) {
+    for ( uint16_t  i = x; i < (x+length); ++i ) {
+        image.pixel(i, y) = color;
     }
 }
-static void drawVerticalColorLine( ColorImage& image, const uint16_t x, uint16_t y, const uint16_t length, const Color color ) {
-    for ( ; y < (y+length); ++y) {
-        image.pixel(x, y) = color;
+static void drawVerticalColorLine( ColorImage& image, const uint16_t x, const uint16_t y, const uint16_t length, const Color color ) {
+    for ( uint16_t j = y; j < (y+length); ++j ) {
+        image.pixel(x, j) = color;
     }
 }
 
@@ -239,13 +239,13 @@ uint8_t& GrayImage::pixel(const uint16_t x, const uint16_t y) {
     ::isGoodPosition(x, getWidth());
     ::isGoodPosition(y, getHeight());
 
-    return pixels[(height_ * y) + x];
+    return pixels[(width_ * y) + x];
 }
 const uint8_t& GrayImage::pixel(const uint16_t x, const uint16_t y) const {
     ::isGoodPosition(x, getWidth());
     ::isGoodPosition(y, getHeight());
 
-    return pixels[(height_ * y) + x];
+    return pixels[(width_ * y) + x];
 }
 
 
@@ -261,17 +261,17 @@ void GrayImage::rectangle( const uint16_t x, const uint16_t y,
                           const uint16_t width, const uint16_t height,
                           const uint8_t color) {
     ::drawHorizontalGrayLine( *this, x, y, width, color );
-    ::drawHorizontalGrayLine( *this, x, y + height, width, color );
+    ::drawHorizontalGrayLine( *this, x, (y-1)+height, width, color );
 
-    ::drawVerticalGrayLine( *this, x, y, height, color );
-    ::drawVerticalGrayLine( *this, x + width, y, height, color );
+    ::drawVerticalGrayLine( *this, x, y+1, height-2, color );
+    ::drawVerticalGrayLine( *this, (x-1)+width, y+1, height-2, color );
 }
 
-void GrayImage::fillRectangle( const uint16_t x, uint16_t y,
+void GrayImage::fillRectangle( const uint16_t x, const uint16_t y,
                                const uint16_t width, const uint16_t height,
                                const uint8_t color ) {
-    for ( ; y < (y+height); ++y ) {
-        ::drawHorizontalGrayLine( *this, x, y, width, color );
+    for ( uint16_t i = y; i < (y+height); ++i ) {
+        ::drawHorizontalGrayLine( *this, x, i, width, color );
     }
 }
 
@@ -410,16 +410,13 @@ GrayImage *GrayImage::readPGM( std::istream &is ) {
     ::skip_comments( is );
 
     const auto width = ::isGoodWidth( is, std::numeric_limits<uint16_t>::max() );
-
     ::skip_comments( is );
 
     const auto height = ::isGoodHeight( is, std::numeric_limits<uint16_t>::max() );
-
     ::skip_comments( is );
 
     const auto intensity = ::isGoodIntensity( is, std::numeric_limits<uint8_t>::max() );
-
-    ::skip_ONEwhitespace(is);
+    ::skip_ONEwhitespace(is );
 
     GrayImage* const image = ::createGrayImage(width, height, intensity);
 
