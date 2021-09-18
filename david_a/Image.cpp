@@ -418,11 +418,17 @@ GrayImage *GrayImage::readPGM( std::istream &is ) {
     const auto intensity = ::isGoodIntensity( is, std::numeric_limits<uint8_t>::max() );
     ::skip_ONEwhitespace(is );
 
+    uint8_t* pixels = new uint8_t[width*height];
+
+    is.read(reinterpret_cast<char*>(pixels), static_cast<long>(width * height) * sizeof(uint8_t));
+
+    ::isGoodGrayPixel(pixels, intensity, width * height);
+
     GrayImage* const image = ::createGrayImage(width, height, intensity);
 
-    for ( uint32_t i = 0; i < (width * height); ++i ) {
-        image->pixels[i] = ::readGoodRawGrayValue( is, intensity );
-    }
+    std::swap(pixels, image->pixels);
+
+    delete[] pixels;
 
     ::skip_ONEwhitespace(is);
 
@@ -530,12 +536,12 @@ Color::Color( const uint8_t r, const uint8_t g, const uint8_t b )
 
 
 GrayImage* GrayImage::simpleScale( const uint16_t width, const uint16_t height ) const {
-    auto image = new GrayImage( width, height );
+    auto image = new GrayImage( width, height, intensity_);
 
     for ( uint16_t y = 0; y < height; ++y ) {
         for ( uint16_t x = 0; x < width; ++x ) {
-            image->pixel(x,y) = pixel(static_cast<uint16_t>(x * (width_ / width)),
-                                      static_cast<uint16_t>(y * (height_ / height))
+            image->pixel(x,y) = pixel(static_cast<uint16_t>(x * (static_cast<double>(width_) / width)),
+                                      static_cast<uint16_t>(y * (static_cast<double>(height_) / height))
                                       );
         }
     }

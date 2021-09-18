@@ -27,27 +27,47 @@ int main( int argc, char* argv[] ) {
 
         const GrayImage* const gray = GrayImage::readPGM( ifimage );
 
-        GrayImage imgcopy( *gray );
+        //ofstream ofimgbis( "../ressources/chatbis.pgm", ios::binary );
+        //gray->writePGM( ofimgbis );
 
-        imgcopy.clear( 15 );
+        //GrayImage imgcopy( *gray );
 
-        GrayImage imgrect( *gray );
+        //imgcopy.clear( 15 );
 
-        GrayImage imgscale( *gray );
+        //GrayImage imgrect( *gray );
 
-        auto pimg = imgscale.simpleScale( 2 * imgscale.getWidth(), 2 * imgscale.getHeight() );
+        auto pimg = gray->simpleScale( 2 * gray->getWidth(), 2 * gray->getHeight() );
 
-        imgrect.fillRectangle( 150, 120, 10, 20, 0 );
-        imgcopy.fillRectangle( 150, 120, 150, 50, 255 );
+        //imgrect.rectangle( 150, 120, 10, 20, 0 );
+        //imgcopy.fillRectangle( 150, 120, 150, 50, 255 );
 
-        ofstream ofimgrect( "../ressources/chatrect.pgm", ios::binary );
-        imgrect.writePGM( ofimgrect );
+        //ofstream ofimgrect( "../ressources/chatrect.pgm", ios::binary );
+        //imgrect.writePGM( ofimgrect );
 
-        ofstream ofimgclear( "../ressources/chatclear.pgm", ios::binary );
-        imgcopy.writePGM( ofimgclear );
+        //ofstream ofimgclear( "../ressources/chatclear.pgm", ios::binary );
+        //imgcopy.writePGM( ofimgclear );
 
         std::ofstream of( "../ressources/chatscale.pgm", ios::binary );
         pimg->writePGM( of );
+
+
+
+        GrayImage shade(1,10, 10);
+
+
+        for ( uint16_t i = 0; i < 10; ++i ) {
+            shade.pixel(0,i) = i;
+        }
+
+
+
+        const GrayImage * const p = shade.simpleScale( shade.getWidth(), 2 * shade.getHeight());
+
+        ofstream ofscale( "../ressources/255shades.pgm", ios::binary );
+        shade.writePGM(ofscale);
+
+        ofstream of2scale("../ressources/510shades.pgm", ios::binary);
+        p->writePGM(of2scale);
 
 
     } // Trois types d'exceptions seront attrapés (les chaines C et C++ ainsi que
