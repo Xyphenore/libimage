@@ -30,22 +30,22 @@ int main( int argc, char* argv[] ) {
         //ofstream ofimgbis( "../ressources/chatbis.pgm", ios::binary );
         //gray->writePGM( ofimgbis );
 
-        //GrayImage imgcopy( *gray );
+        GrayImage imgcopy( *gray );
 
-        //imgcopy.clear( 15 );
+        imgcopy.clear( 150 );
 
         //GrayImage imgrect( *gray );
 
         auto pimg = gray->simpleScale( 2 * gray->getWidth(), 2 * gray->getHeight() );
 
         //imgrect.rectangle( 150, 120, 10, 20, 0 );
-        //imgcopy.fillRectangle( 150, 120, 150, 50, 255 );
+        imgcopy.fillRectangle( 150, 120, 150, 50, 255 );
 
         //ofstream ofimgrect( "../ressources/chatrect.pgm", ios::binary );
         //imgrect.writePGM( ofimgrect );
 
-        //ofstream ofimgclear( "../ressources/chatclear.pgm", ios::binary );
-        //imgcopy.writePGM( ofimgclear );
+        ofstream ofimgclear( "../ressources/chatclear.pgm", ios::binary );
+        imgcopy.writePGM( ofimgclear );
 
         std::ofstream of( "../ressources/chatscale.pgm", ios::binary );
         pimg->writePGM( of );

@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <array>
 #include <vector>
+#include <cmath>
 
 extern "C" {
 #include <jpeglib.h>
@@ -45,7 +46,6 @@ static void skip_comments( std::istream &is ) {
         is.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
     }
 }
-
 static void skip_ONEwhitespace( std::istream& is ) {
     const std::array<char,6> whitespace({ '\t', '\n', '\v',
                                           '\f', '\r', ' '});
@@ -64,7 +64,7 @@ static void noData( std::istream& is ) {
     is.peek();
 
     if ( !(is.eof()) ) {
-        throw alwaysData("Input stream always contain data");
+        throw alwaysData( "Input stream always contain data" );
     }
 }
 
@@ -266,7 +266,6 @@ void GrayImage::rectangle( const uint16_t x, const uint16_t y,
     ::drawVerticalGrayLine( *this, x, y+1, height-2, color );
     ::drawVerticalGrayLine( *this, (x-1)+width, y+1, height-2, color );
 }
-
 void GrayImage::fillRectangle( const uint16_t x, const uint16_t y,
                                const uint16_t width, const uint16_t height,
                                const uint8_t color ) {
@@ -470,8 +469,7 @@ ColorImage::ColorImage( const uint16_t width, const uint16_t height, const uint8
 : width_(width), height_(height),intensity_(intensity), pixels(new Color[width_ * height_]) {}
 
 ColorImage::ColorImage(const ColorImage& src)
-: width_(src.width_), height_(src.height_)
-{
+: width_(src.width_), height_(src.height_) {
     delete[] pixels;
 
     pixels = new Color[src.width_ * src.height_];
@@ -520,7 +518,6 @@ void ColorImage::rectangle( const uint16_t x, const uint16_t y,
     ::drawVerticalColorLine( *this, x, y, height, color );
     ::drawVerticalColorLine( *this, x + width, y, height, color );
 }
-
 void ColorImage::fillRectangle( const uint16_t x, uint16_t y,
                                const uint16_t width, const uint16_t height,
                                const Color color ) {
@@ -559,6 +556,39 @@ ColorImage* ColorImage::simpleScale( const uint16_t width, const uint16_t height
             );
         }
     }
+
+    return image;
+}
+
+GrayImage* GrayImage::bilinearScale( const uint16_t width, const uint16_t height ) const {
+    auto image = new GrayImage(width, height, intensity_);
+
+    for (uint16_t yp = 0; yp < height; ++yp) {
+        const double y = (static_cast<double>(height_)/height)*yp;
+        const double y1 = std::ceil(y);
+        const double y2 = std::floor(y);
+
+        const double ratioy = (y - y1) / (y2 - y1);
+
+        for (uint16_t xp = 0; xp < width; ++xp ) {
+            const double x = (static_cast<double>(width_)/width)*xp;
+            const double x1 = std::ceil(x);
+            const double x2 = std::floor(x);
+
+            const double ratiox = (x - x1) / (x2 - x1);
+
+            const uint8_t p1 = pixel(static_cast<uint16_t>(x1), static_cast<uint16_t>(y1));
+            const uint8_t p2 = pixel(static_cast<uint16_t>(x1), static_cast<uint16_t>(y2));
+            const uint8_t p3 = pixel(static_cast<uint16_t>(x2), static_cast<uint16_t>(y1));
+            const uint8_t p4 = pixel(static_cast<uint16_t>(x2), static_cast<uint16_t>(y2));
+
+	        image->pixel(xp, yp) = static_cast<uint8_t>(std::round(
+            ((1 - ratioy) * (( (1 - ratiox) * p1 ) + ( ratiox * p3 )))
+                + (ratioy * (( (1 - ratiox) * p2 ) + ( ratiox * p4 )))
+                ));
+
+        }
+	}
 
     return image;
 }
