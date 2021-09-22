@@ -11,12 +11,17 @@
 // #define CORR_TEMPLATE
 
 #include <iostream>
+#include <vector>
 
 const char* const identifier = "david_a";
 
 const char* const informations = "";
 
+using grayShade = uint8_t;
+
+
 class GrayImage {
+    static constexpr grayShade defaultColor = 0;
 public:
     GrayImage() = delete;
     GrayImage( uint16_t width, uint16_t height );
@@ -33,8 +38,11 @@ public:
     const uint8_t& pixel( uint16_t x, uint16_t y ) const;
 
     void clear( uint8_t color );
+    void clear();
 
+    void rectangle( uint16_t x, uint16_t y, uint16_t width, uint16_t height );
     void rectangle( uint16_t x, uint16_t y, uint16_t width, uint16_t height, uint8_t color );
+    void fillRectangle( uint16_t x, uint16_t y, uint16_t width, uint16_t height );
     void fillRectangle( uint16_t x, uint16_t y, uint16_t width, uint16_t height, uint8_t color );
 
     GrayImage* simpleScale( uint16_t width, uint16_t height ) const;
@@ -52,9 +60,9 @@ public:
 private:
     uint16_t width_;
     uint16_t height_;
-    uint8_t intensity_{ 255 };
+    grayShade intensity_{ 255 };
 
-    uint8_t* pixels{ nullptr };
+    std::vector<grayShade> pixels;
 };
 
 inline const uint16_t& GrayImage::getWidth() const { return width_; }
@@ -98,9 +106,9 @@ public:
 
     void clear( Color color );
 
-    void rectangle( uint16_t x, uint16_t y, uint16_t width, uint16_t height, Color color );
+    void rectangle( uint16_t x, uint16_t y, uint16_t width, uint16_t height, Color color = Color());
 
-    void fillRectangle( uint16_t x, uint16_t y, uint16_t width, uint16_t height, Color color );
+    void fillRectangle( uint16_t x, uint16_t y, uint16_t width, uint16_t height, Color color = Color());
 
     ColorImage* simpleScale( uint16_t width, uint16_t height ) const;
 

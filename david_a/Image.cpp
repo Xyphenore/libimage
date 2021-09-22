@@ -257,14 +257,26 @@ void GrayImage::clear( const uint8_t color ) {
     std::fill(first, end, color);
 }
 
+void GrayImage::clear() {
+    clear(defaultColor);
+}
+
 void GrayImage::rectangle( const uint16_t x, const uint16_t y,
-                          const uint16_t width, const uint16_t height,
-                          const uint8_t color) {
+                           const uint16_t width, const uint16_t height,
+                           const uint8_t color) {
     ::drawHorizontalGrayLine( *this, x, y, width, color );
     ::drawHorizontalGrayLine( *this, x, (y-1)+height, width, color );
 
     ::drawVerticalGrayLine( *this, x, y+1, height-2, color );
     ::drawVerticalGrayLine( *this, (x-1)+width, y+1, height-2, color );
+}
+void GrayImage::rectangle( const uint16_t x, const uint16_t y,
+                           const uint16_t width, const uint16_t height ) {
+    rectangle(x,y,width,height,defaultColor);
+}
+void GrayImage::fillRectangle( const uint16_t x, const uint16_t y,
+                               const uint16_t width, const uint16_t height ) {
+    fillRectangle(x,y,width,height, defaultColor);
 }
 void GrayImage::fillRectangle( const uint16_t x, const uint16_t y,
                                const uint16_t width, const uint16_t height,
@@ -419,6 +431,7 @@ GrayImage *GrayImage::readPGM( std::istream &is ) {
 
     uint8_t* pixels = new uint8_t[width*height];
 
+    // Expliquer la lecture
     is.read(reinterpret_cast<char*>(pixels), static_cast<long>(width * height) * sizeof(uint8_t));
 
     ::isGoodGrayPixel(pixels, intensity, width * height);
@@ -565,21 +578,28 @@ GrayImage* GrayImage::bilinearScale( const uint16_t width, const uint16_t height
 
     for (uint16_t yp = 0; yp < height; ++yp) {
         const double y = (static_cast<double>(height_)/height)*yp;
-        const double y1 = std::ceil(y);
-        const double y2 = ( std::floor(y) < height_ ? std::floor(y) : (height_ - 1) );
+        const double y1 = std::floor(y);
+        const double y2 = ( std::ceil(y) < height_ ? std::ceil(y) : (height_ - 1) );
 
         const double ratioy = (y - y1) / (y2 - y1);
 
         for (uint16_t xp = 0; xp < width; ++xp ) {
             const double x = (static_cast<double>(width_)/width)*xp;
-            const double x1 = std::ceil(x);
-            const double x2 = ( std::floor(x) < width_ ? std::floor(x) : (width_ - 1) ) ;
+            const double x1 = std::floor(x);
+            const double x2 = ( std::ceil(x) < width_ ? std::ceil(x) : (width_ - 1) ) ;
 
             const double ratiox = (x - x1) / (x2 - x1);
 
+
             const uint8_t p1 = pixel(static_cast<uint16_t>(x1), static_cast<uint16_t>(y1));
+
+            //std::cerr << "P2\n";
             const uint8_t p2 = pixel(static_cast<uint16_t>(x1), static_cast<uint16_t>(y2));
+
+            //std::cerr << "P3\n";
             const uint8_t p3 = pixel(static_cast<uint16_t>(x2), static_cast<uint16_t>(y1));
+
+            //std::cerr << "P4\n";
             const uint8_t p4 = pixel(static_cast<uint16_t>(x2), static_cast<uint16_t>(y2));
 
 	        image->pixel(xp, yp) = static_cast<uint8_t>(std::round(
