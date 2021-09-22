@@ -36,7 +36,7 @@ int main( int argc, char* argv[] ) {
 
         //GrayImage imgrect( *gray );
 
-        auto pimg = gray->simpleScale( 2 * gray->getWidth(), 2 * gray->getHeight() );
+        auto pimg = gray->bilinearScale( 2 * gray->getWidth(), 2 * gray->getHeight() );
 
         //imgrect.rectangle( 150, 120, 10, 20, 0 );
         imgcopy.fillRectangle( 150, 120, 150, 50, 255 );
@@ -47,7 +47,7 @@ int main( int argc, char* argv[] ) {
         ofstream ofimgclear( "../ressources/chatclear.pgm", ios::binary );
         imgcopy.writePGM( ofimgclear );
 
-        std::ofstream of( "../ressources/chatscale.pgm", ios::binary );
+        std::ofstream of( "../ressources/chatbilinear.pgm", ios::binary );
         pimg->writePGM( of );
 
 

@@ -566,14 +566,14 @@ GrayImage* GrayImage::bilinearScale( const uint16_t width, const uint16_t height
     for (uint16_t yp = 0; yp < height; ++yp) {
         const double y = (static_cast<double>(height_)/height)*yp;
         const double y1 = std::ceil(y);
-        const double y2 = std::floor(y);
+        const double y2 = ( std::floor(y) < height_ ? std::floor(y) : (height_ - 1) );
 
         const double ratioy = (y - y1) / (y2 - y1);
 
         for (uint16_t xp = 0; xp < width; ++xp ) {
             const double x = (static_cast<double>(width_)/width)*xp;
             const double x1 = std::ceil(x);
-            const double x2 = std::floor(x);
+            const double x2 = ( std::floor(x) < width_ ? std::floor(x) : (width_ - 1) ) ;
 
             const double ratiox = (x - x1) / (x2 - x1);
 
