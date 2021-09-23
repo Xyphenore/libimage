@@ -26,8 +26,8 @@ public:
     GrayImage() = delete;
     GrayImage( uint16_t width, uint16_t height );
     GrayImage( uint16_t width, uint16_t height, uint8_t intensity );
-    GrayImage( const GrayImage& src );
-    ~GrayImage();
+    GrayImage( const GrayImage& src ) = default;
+    ~GrayImage() = default;
 
     GrayImage& operator=( const GrayImage& ) = delete;
 
@@ -37,16 +37,16 @@ public:
     uint8_t& pixel( uint16_t x, uint16_t y );
     const uint8_t& pixel( uint16_t x, uint16_t y ) const;
 
-    void clear( uint8_t color );
     void clear();
+    void clear( grayShade color );
 
     void rectangle( uint16_t x, uint16_t y, uint16_t width, uint16_t height );
-    void rectangle( uint16_t x, uint16_t y, uint16_t width, uint16_t height, uint8_t color );
+    void rectangle( uint16_t x, uint16_t y, uint16_t width, uint16_t height, grayShade color );
     void fillRectangle( uint16_t x, uint16_t y, uint16_t width, uint16_t height );
-    void fillRectangle( uint16_t x, uint16_t y, uint16_t width, uint16_t height, uint8_t color );
+    void fillRectangle( uint16_t x, uint16_t y, uint16_t width, uint16_t height, grayShade color );
 
-    GrayImage* simpleScale( uint16_t width, uint16_t height ) const;
-    GrayImage* bilinearScale( uint16_t width, uint16_t height ) const;
+    GrayImage* simpleScale( uint16_t newWidth, uint16_t newHeight ) const;
+    GrayImage* bilinearScale( uint16_t newWidth, uint16_t newHeight ) const;
 
     // PGM a 2 formats le P2 et le P5, il faut donc différencier les deux
     void writePGM( std::ostream& os ) const;

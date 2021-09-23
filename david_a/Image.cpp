@@ -210,60 +210,34 @@ static Color readGoodRawColorValue( std::istream& is, const uint8_t limit ) {
 // Définition of GrayImage's methods
 
 GrayImage::GrayImage(const uint16_t width, const uint16_t height)
-: width_(width), height_(height), pixels(new uint8_t[width_ * height_]) {}
+: width_(width), height_(height), pixels(width_ * height_) {}
 
 GrayImage::GrayImage(const uint16_t width, const uint16_t height, const uint8_t intensity)
-: width_(width), height_(height), intensity_(intensity), pixels(new uint8_t[width_ * height_]) {}
-
-GrayImage::GrayImage(const GrayImage& src)
-: width_(src.width_), height_(src.height_)
-{
-    delete[] pixels;
-
-    pixels = new uint8_t[src.width_ * src.height_];
-
-    width_ = src.width_;
-    height_ = src.height_;
-
-    for( std::size_t i = 0; i < (width_ * height_); ++i ) {
-        pixels[i] = src.pixels[i];
-    }
-}
-
-GrayImage::~GrayImage() {
-  delete[] pixels;
-}
+: width_(width), height_(height), intensity_(intensity), pixels(width_ * height_) {}
 
 
 uint8_t& GrayImage::pixel(const uint16_t x, const uint16_t y) {
     ::isGoodPosition(x, getWidth());
     ::isGoodPosition(y, getHeight());
 
-    return pixels[(width_ * y) + x];
+    return pixels.at((width_ * y) + x);
 }
 const uint8_t& GrayImage::pixel(const uint16_t x, const uint16_t y) const {
     ::isGoodPosition(x, getWidth());
     ::isGoodPosition(y, getHeight());
 
-    return pixels[(width_ * y) + x];
+    return pixels.at((width_ * y) + x);
 }
 
 
-void GrayImage::clear( const uint8_t color ) {
-    using Iterator = const std::iterator<std::forward_iterator_tag, uint8_t>::pointer;
-    Iterator first = pixels;
-    Iterator end = pixels + (width_ * height_);
-
-    std::fill(first, end, color);
+void GrayImage::clear( const grayShade color ) {
+    std::fill(pixels.begin(), pixels.end(), color);
 }
-
-void GrayImage::clear() {
-    clear(defaultColor);
-}
+void GrayImage::clear() { clear(defaultColor); }
 
 void GrayImage::rectangle( const uint16_t x, const uint16_t y,
                            const uint16_t width, const uint16_t height,
-                           const uint8_t color) {
+                           const grayShade color) {
     ::drawHorizontalGrayLine( *this, x, y, width, color );
     ::drawHorizontalGrayLine( *this, x, (y-1)+height, width, color );
 
@@ -334,13 +308,13 @@ void ColorImage::writePPM( std::ostream& os ) const {
 
 // P5
 void GrayImage::writePGM( std::ostream& os ) const {
-    ::isGoodGrayPixel( pixels, intensity_, width_ * height_ );
+    ::isGoodGrayPixel( pixels.data(), intensity_, width_ * height_ );
 
     os << "P5\n" << "# Image sauvegardée par " << ::identifier << '\n'
        << width_ << " " << height_ << '\n'
        << static_cast<uint16_t>(intensity_) << '\n';
 
-    os.write(reinterpret_cast<const char*>(pixels), static_cast<long>(width_ * height_) * sizeof(uint8_t));
+    os.write(reinterpret_cast<const char*>(pixels.data()), static_cast<long>(width_ * height_) * sizeof(uint8_t));
 
     os << '\n' << std::flush;
 }
@@ -417,7 +391,6 @@ ColorImage* ColorImage::readPPM( std::istream& is ) {
 GrayImage *GrayImage::readPGM( std::istream &is ) {
     // NOTE : isGoodFormat( is, "PG") devra être renommé en CompareFormat
     ::isGoodFormat( is, "P5" );
-
     ::skip_comments( is );
 
     const auto width = ::isGoodWidth( is, std::numeric_limits<uint16_t>::max() );
@@ -429,18 +402,16 @@ GrayImage *GrayImage::readPGM( std::istream &is ) {
     const auto intensity = ::isGoodIntensity( is, std::numeric_limits<uint8_t>::max() );
     ::skip_ONEwhitespace(is );
 
-    uint8_t* pixels = new uint8_t[width*height];
+    std::vector<uint8_t>pixels(width*height);
 
     // Expliquer la lecture
-    is.read(reinterpret_cast<char*>(pixels), static_cast<long>(width * height) * sizeof(uint8_t));
+    is.read(reinterpret_cast<char*>(pixels.data()), static_cast<long>(width * height) * sizeof(uint8_t));
 
-    ::isGoodGrayPixel(pixels, intensity, width * height);
+    ::isGoodGrayPixel(pixels.data(), intensity, width * height);
 
     GrayImage* const image = ::createGrayImage(width, height, intensity);
 
     std::swap(pixels, image->pixels);
-
-    delete[] pixels;
 
     ::skip_ONEwhitespace(is);
 
