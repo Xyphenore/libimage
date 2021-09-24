@@ -27,7 +27,7 @@ public:
     GrayImage( uint16_t width, uint16_t height );
     GrayImage( uint16_t width, uint16_t height, uint8_t intensity );
     GrayImage( const GrayImage& src ) = default;
-    ~GrayImage() = default;
+    ~GrayImage() noexcept = default;
 
     GrayImage& operator=( const GrayImage& ) = delete;
 
@@ -44,6 +44,9 @@ public:
     void rectangle( uint16_t x, uint16_t y, uint16_t width, uint16_t height, grayShade color );
     void fillRectangle( uint16_t x, uint16_t y, uint16_t width, uint16_t height );
     void fillRectangle( uint16_t x, uint16_t y, uint16_t width, uint16_t height, grayShade color );
+
+    void horizontalLine( uint16_t x, uint16_t y, uint16_t length, grayShade color );
+    void verticalLine( uint16_t x, uint16_t y, uint16_t length, grayShade color );
 
     GrayImage* simpleScale( uint16_t newWidth, uint16_t newHeight ) const;
     GrayImage* bilinearScale( uint16_t newWidth, uint16_t newHeight ) const;
@@ -62,18 +65,18 @@ private:
     uint16_t height_;
     grayShade intensity_{ 255 };
 
-    std::vector<grayShade> pixels;
+    std::vector<grayShade> pixels_;
+
+    GrayImage( uint16_t width, uint16_t height, uint8_t intensity, std::vector<uint8_t>&& pixels );
 };
 
 inline const uint16_t& GrayImage::getWidth() const { return width_; }
-
 inline const uint16_t& GrayImage::getHeight() const { return height_; }
 
 
 class Color {
 public:
     Color() = default;
-
     Color( uint8_t r, uint8_t g, uint8_t b );
 
     uint8_t r_{ 0 };
@@ -137,7 +140,6 @@ private :
 };
 
 inline const uint16_t& ColorImage::getWidth() const { return width_; }
-
 inline const uint16_t& ColorImage::getHeight() const { return height_; }
 
 

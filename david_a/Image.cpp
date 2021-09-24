@@ -28,16 +28,19 @@ using invalidIntensity = std::invalid_argument;
 using invalidPosition = std::invalid_argument;
 
 Color operator+( const Color& c1, const Color& c2 ) {
-    return { static_cast<uint8_t>(c1.r_ + c2.r_),
-             static_cast<uint8_t>(c1.g_ + c2.g_),
-             static_cast<uint8_t>(c1.b_ + c2.b_)
+    return { static_cast<uint8_t>((static_cast<double>(c1.r_) + c2.r_)/2),
+             static_cast<uint8_t>((static_cast<double>(c1.g_) + c2.g_)/2),
+             static_cast<uint8_t>((static_cast<double>(c1.b_) + c2.b_)/2)
     };
 }
 Color operator*( const double alpha, const Color& c ) {
-    return { static_cast<uint8_t>(c.r_ * alpha),
-             static_cast<uint8_t>(c.g_ * alpha),
-             static_cast<uint8_t>(c.b_ * alpha)
+    return { static_cast<uint8_t>(std::round(c.r_ * alpha)),
+             static_cast<uint8_t>(std::round(c.g_ * alpha)),
+             static_cast<uint8_t>(std::round(c.b_ * alpha))
     };
+}
+Color operator*( const Color& c, const double alpha ) {
+    return operator*(alpha, c);
 }
 
 
@@ -61,6 +64,7 @@ static bool isEndOfLine( const uint16_t pos, const uint16_t width, const uint16_
     return ( 0 == ( pos % width ) ) || ( 0 == ( pos % formatLimit ) );
 }
 static void noData( std::istream& is ) {
+    // Actualisation du flux
     is.peek();
 
     if ( !(is.eof()) ) {
@@ -139,16 +143,7 @@ static ColorImage* createColorImage( const uint16_t width, const uint16_t height
 }
 
 
-static void drawHorizontalGrayLine( GrayImage& image, const uint16_t x, const uint16_t y, const uint16_t length, const uint8_t color ) {
-    for ( uint16_t  i = x; i < (x+length); ++i ) {
-        image.pixel(i, y) = color;
-    }
-}
-static void drawVerticalGrayLine( GrayImage& image, const uint16_t x, const uint16_t y, const uint16_t length, const uint8_t color ) {
-    for ( uint16_t j = y; j < (y+length); ++j ) {
-	    image.pixel(x, j) = color;
-    }
-}
+
 static void drawHorizontalColorLine( ColorImage& image, const uint16_t x, const uint16_t y, const uint16_t length, const Color color ) {
     for ( uint16_t  i = x; i < (x+length); ++i ) {
         image.pixel(i, y) = color;
@@ -210,43 +205,56 @@ static Color readGoodRawColorValue( std::istream& is, const uint8_t limit ) {
 // Définition of GrayImage's methods
 
 GrayImage::GrayImage(const uint16_t width, const uint16_t height)
-: width_(width), height_(height), pixels(width_ * height_) {}
+: width_(width), height_(height), pixels_( width_ * height_) {}
 
 GrayImage::GrayImage(const uint16_t width, const uint16_t height, const uint8_t intensity)
-: width_(width), height_(height), intensity_(intensity), pixels(width_ * height_) {}
+: width_(width), height_(height), intensity_(intensity), pixels_( width_ * height_) {}
 
+GrayImage::GrayImage(const uint16_t width, const uint16_t height, const uint8_t intensity, std::vector<uint8_t>&& pixels)
+: width_(width), height_(height), intensity_(intensity), pixels_(pixels) {}
 
 uint8_t& GrayImage::pixel(const uint16_t x, const uint16_t y) {
     ::isGoodPosition(x, getWidth());
     ::isGoodPosition(y, getHeight());
 
-    return pixels.at((width_ * y) + x);
+    return pixels_.at( ( width_ * y) + x);
 }
 const uint8_t& GrayImage::pixel(const uint16_t x, const uint16_t y) const {
     ::isGoodPosition(x, getWidth());
     ::isGoodPosition(y, getHeight());
 
-    return pixels.at((width_ * y) + x);
+    return pixels_.at( ( width_ * y) + x);
 }
 
 
 void GrayImage::clear( const grayShade color ) {
-    std::fill(pixels.begin(), pixels.end(), color);
+    std::fill( pixels_.begin(), pixels_.end(), color);
 }
 void GrayImage::clear() { clear(defaultColor); }
 
-void GrayImage::rectangle( const uint16_t x, const uint16_t y,
-                           const uint16_t width, const uint16_t height,
-                           const grayShade color) {
-    ::drawHorizontalGrayLine( *this, x, y, width, color );
-    ::drawHorizontalGrayLine( *this, x, (y-1)+height, width, color );
-
-    ::drawVerticalGrayLine( *this, x, y+1, height-2, color );
-    ::drawVerticalGrayLine( *this, (x-1)+width, y+1, height-2, color );
+void GrayImage::horizontalLine( const uint16_t x, const uint16_t y, const uint16_t length, const grayShade color ) {
+    for ( uint16_t i = x; i < (x+length); ++i ) {
+        pixel(i, y) = color;
+    }
 }
+void GrayImage::verticalLine( const uint16_t x, const uint16_t y, const uint16_t length, const grayShade color ) {
+    for ( uint16_t j = y; j < (y+length); ++j ) {
+        pixel(x, j) = color;
+    }
+}
+
 void GrayImage::rectangle( const uint16_t x, const uint16_t y,
                            const uint16_t width, const uint16_t height ) {
     rectangle(x,y,width,height,defaultColor);
+}
+void GrayImage::rectangle( const uint16_t x, const uint16_t y,
+                           const uint16_t width, const uint16_t height,
+                           const grayShade color) {
+    horizontalLine( x, y, width, color );
+    horizontalLine( x, (y-1)+height, width, color );
+
+    verticalLine( x, y+1, height-2, color );
+    verticalLine( (x-1)+width, y+1, height-2, color );
 }
 void GrayImage::fillRectangle( const uint16_t x, const uint16_t y,
                                const uint16_t width, const uint16_t height ) {
@@ -256,7 +264,7 @@ void GrayImage::fillRectangle( const uint16_t x, const uint16_t y,
                                const uint16_t width, const uint16_t height,
                                const uint8_t color ) {
     for ( uint16_t i = y; i < (y+height); ++i ) {
-        ::drawHorizontalGrayLine( *this, x, i, width, color );
+        horizontalLine( x, i, width, color );
     }
 }
 
@@ -265,7 +273,7 @@ void GrayImage::fillRectangle( const uint16_t x, const uint16_t y,
 // P2
 /*
 void GrayImage::writePGM( std::ostream &os ) const {
-    ::isGoodGrayPixel(pixels, intensity_, width_ * height_);
+    ::isGoodGrayPixel(pixels_, intensity_, width_ * height_);
 
     const uint16_t pgm_limit_char = 70;
 
@@ -276,7 +284,7 @@ void GrayImage::writePGM( std::ostream &os ) const {
     for ( uint16_t i = 0; i < ( width_ * height_ ); ++i ) {
         if ( ( 0 != i ) && ::isEndOfLine( i, width_, pgm_limit_char ) ) { os << '\n'; }
 
-        os << pixels[i] << " ";
+        os << pixels_[i] << " ";
     }
 
     os.flush();
@@ -286,7 +294,7 @@ void GrayImage::writePGM( std::ostream &os ) const {
 // P3
 /*
 void ColorImage::writePPM( std::ostream& os ) const {
-    ::isGoodColorPixel(pixels, intensity_, width_ * height_);
+    ::isGoodColorPixel(pixels_, intensity_, width_ * height_);
 
     const uint16_t pgm_limit_char = 70;
 
@@ -297,9 +305,9 @@ void ColorImage::writePPM( std::ostream& os ) const {
     for ( uint16_t i = 0; i < ( width_ * height_ ); ++i ) {
         if ( ( 0 != i ) && ::isEndOfLine( i, width_, pgm_limit_char ) ) { os << '\n'; }
 
-        os << pixels[i].r_ << " "
-           << pixels[i].g_ << " "
-           << pixels[i].r_ << " ";
+        os << pixels_[i].r_ << " "
+           << pixels_[i].g_ << " "
+           << pixels_[i].r_ << " ";
     }
 
     os.flush();
@@ -308,13 +316,13 @@ void ColorImage::writePPM( std::ostream& os ) const {
 
 // P5
 void GrayImage::writePGM( std::ostream& os ) const {
-    ::isGoodGrayPixel( pixels.data(), intensity_, width_ * height_ );
+    ::isGoodGrayPixel( pixels_.data(), intensity_, width_ * height_ );
 
     os << "P5\n" << "# Image sauvegardée par " << ::identifier << '\n'
        << width_ << " " << height_ << '\n'
        << static_cast<uint16_t>(intensity_) << '\n';
 
-    os.write(reinterpret_cast<const char*>(pixels.data()), static_cast<long>(width_ * height_) * sizeof(uint8_t));
+    os.write( reinterpret_cast<const char*>(pixels_.data()), static_cast<long>(width_ * height_) * sizeof(uint8_t));
 
     os << '\n' << std::flush;
 }
@@ -349,9 +357,9 @@ GrayImage* GrayImage::readPGM( std::istream& is ) {
     GrayImage* image = ::createGrayImage(width, height);
 
     for ( uint16_t i = 0; i < (width * height); ++i ) {
-        image->pixels[i] = ::readGoodGrayValue(is, intensity);
+        image->pixels_[i] = ::readGoodGrayValue(is, intensity);
 
-        //is >> image->pixels[i];
+        //is >> image->pixels_[i];
     }
 
     ::noData( is );
@@ -377,9 +385,9 @@ ColorImage* ColorImage::readPPM( std::istream& is ) {
     ColorImage* image = ::createColorImage(width, height);
 
     for ( uint16_t i = 0; i < (width * height); ++i ) {
-        image->pixels[i] = ::readGoodColorValue(is, intensity);
+        image->pixels_[i] = ::readGoodColorValue(is, intensity);
 
-        //is >> image->pixels[i];
+        //is >> image->pixels_[i];
     }
 
     ::noData( is );
@@ -411,7 +419,7 @@ GrayImage *GrayImage::readPGM( std::istream &is ) {
 
     GrayImage* const image = ::createGrayImage(width, height, intensity);
 
-    std::swap(pixels, image->pixels);
+    std::swap(pixels, image->pixels_);
 
     ::skip_ONEwhitespace(is);
 
@@ -516,13 +524,16 @@ Color::Color( const uint8_t r, const uint8_t g, const uint8_t b )
 : r_(r), g_(g), b_(b) {}
 
 
-GrayImage* GrayImage::simpleScale( const uint16_t width, const uint16_t height ) const {
-    auto image = new GrayImage( width, height, intensity_);
+GrayImage* GrayImage::simpleScale( const uint16_t newWidth, const uint16_t newHeight ) const {
+    auto image = ::createGrayImage(newWidth, newHeight, intensity_);
 
-    for ( uint16_t y = 0; y < height; ++y ) {
-        for ( uint16_t x = 0; x < width; ++x ) {
-            image->pixel(x,y) = pixel(static_cast<uint16_t>(x * (static_cast<double>(width_) / width)),
-                                      static_cast<uint16_t>(y * (static_cast<double>(height_) / height))
+    const double ratioW = static_cast<double>(width_) / newWidth;
+    const double ratioH = static_cast<double>(height_) / newHeight;
+
+    for ( uint16_t y = 0; y < newHeight; ++y ) {
+        for ( uint16_t x = 0; x < newWidth; ++x ) {
+            image->pixel(x,y) = pixel(static_cast<uint16_t>(x * ratioW),
+                                      static_cast<uint16_t>(y * ratioH)
                                       );
         }
     }
