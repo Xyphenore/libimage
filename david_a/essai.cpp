@@ -30,44 +30,48 @@ int main( int argc, char* argv[] ) {
         //ofstream ofimgbis( "../ressources/chatbis.pgm", ios::binary );
         //gray->writePGM( ofimgbis );
 
-        GrayImage imgcopy( *gray );
+        //GrayImage imgcopy( *gray );
 
-        imgcopy.clear( 150 );
+        //imgcopy.clear( 150 );
 
         //GrayImage imgrect( *gray );
 
-        auto pimg = gray->bilinearScale( 2 * gray->getWidth(), 2 * gray->getHeight() );
+        auto pimg = gray->simpleScale( 2 * gray->getWidth(), 2 * gray->getHeight() );
+        auto pbilinear = gray->bilinearScale( 2 * gray->getWidth(), 2 * gray->getHeight() );
 
         //imgrect.rectangle( 150, 120, 10, 20, 0 );
-        imgcopy.fillRectangle( 150, 120, 150, 50, 255 );
+        //imgcopy.fillRectangle( 150, 120, 150, 50, 255 );
 
         //ofstream ofimgrect( "../ressources/chatrect.pgm", ios::binary );
         //imgrect.writePGM( ofimgrect );
 
-        ofstream ofimgclear( "../ressources/chatclear.pgm", ios::binary );
-        imgcopy.writePGM( ofimgclear );
+        //ofstream ofimgclear( "../ressources/chatclear.pgm", ios::binary );
+        //imgcopy.writePGM( ofimgclear );
 
         std::ofstream of( "../ressources/chatbilinear.pgm", ios::binary );
-        pimg->writePGM( of );
+        pbilinear->writePGM( of );
+
+        std::ofstream off( "../ressources/chatscale.pgm", ios::binary );
+        pimg->writePGM(off);
 
 
 
-        GrayImage shade(1,10, 10);
+        //GrayImage shade(1,10, 10);
 
-
+        /*
         for ( uint16_t i = 0; i < 10; ++i ) {
             shade.pixel(0,i) = i;
         }
+        */
 
 
+        //const GrayImage * const p = shade.simpleScale( shade.getWidth(), 2 * shade.getHeight());
 
-        const GrayImage * const p = shade.simpleScale( shade.getWidth(), 2 * shade.getHeight());
+        //ofstream ofscale( "../ressources/255shades.pgm", ios::binary );
+        //shade.writePGM(ofscale);
 
-        ofstream ofscale( "../ressources/255shades.pgm", ios::binary );
-        shade.writePGM(ofscale);
-
-        ofstream of2scale("../ressources/510shades.pgm", ios::binary);
-        p->writePGM(of2scale);
+        //ofstream of2scale("../ressources/510shades.pgm", ios::binary);
+        //p->writePGM(of2scale);
 
 
     } // Trois types d'exceptions seront attrapés (les chaines C et C++ ainsi que

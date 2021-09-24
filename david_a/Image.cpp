@@ -525,10 +525,10 @@ Color::Color( const uint8_t r, const uint8_t g, const uint8_t b )
 
 
 GrayImage* GrayImage::simpleScale( const uint16_t newWidth, const uint16_t newHeight ) const {
-    auto image = ::createGrayImage(newWidth, newHeight, intensity_);
+    auto* const image = ::createGrayImage(newWidth, newHeight, intensity_);
 
-    const double ratioW = static_cast<double>(width_) / newWidth;
-    const double ratioH = static_cast<double>(height_) / newHeight;
+    const auto ratioW = static_cast<double>(width_) / newWidth;
+    const auto ratioH = static_cast<double>(height_) / newHeight;
 
     for ( uint16_t y = 0; y < newHeight; ++y ) {
         for ( uint16_t x = 0; x < newWidth; ++x ) {
@@ -555,34 +555,32 @@ ColorImage* ColorImage::simpleScale( const uint16_t width, const uint16_t height
     return image;
 }
 
-GrayImage* GrayImage::bilinearScale( const uint16_t width, const uint16_t height ) const {
-    auto image = new GrayImage(width, height, intensity_);
+GrayImage* GrayImage::bilinearScale( const uint16_t newWidth, const uint16_t newHeight ) const {
+    auto* const image = ::createGrayImage( newWidth, newHeight, intensity_ );
 
-    for (uint16_t yp = 0; yp < height; ++yp) {
-        const double y = (static_cast<double>(height_)/height)*yp;
-        const double y1 = std::floor(y);
-        const double y2 = ( std::ceil(y) < height_ ? std::ceil(y) : (height_ - 1) );
+    const auto ratioW = static_cast<double>(width_) / newWidth;
+    const auto ratioH = static_cast<double>(height_) / newHeight;
 
-        const double ratioy = (y - y1) / (y2 - y1);
+    for ( uint16_t yp = 0; yp < newHeight; ++yp) {
+        const auto y = ratioH * yp;
+        const auto y1 = std::floor(y);
+        const auto y2 = ( std::ceil(y) < height_ ? std::ceil(y) : (height_ - 1) );
 
-        for (uint16_t xp = 0; xp < width; ++xp ) {
-            const double x = (static_cast<double>(width_)/width)*xp;
-            const double x1 = std::floor(x);
-            const double x2 = ( std::ceil(x) < width_ ? std::ceil(x) : (width_ - 1) ) ;
+        const auto ratioy = (y - y1) / (y2 - y1);
 
-            const double ratiox = (x - x1) / (x2 - x1);
+        for ( uint16_t xp = 0; xp < newWidth; ++xp ) {
+            const auto x = ratioW * xp;
+            const auto x1 = std::floor(x);
+            const auto x2 = ( std::ceil(x) < width_ ? std::ceil(x) : (width_ - 1) );
+
+            const auto ratiox = (x - x1) / (x2 - x1);
 
 
             const uint8_t p1 = pixel(static_cast<uint16_t>(x1), static_cast<uint16_t>(y1));
-
-            //std::cerr << "P2\n";
             const uint8_t p2 = pixel(static_cast<uint16_t>(x1), static_cast<uint16_t>(y2));
-
-            //std::cerr << "P3\n";
             const uint8_t p3 = pixel(static_cast<uint16_t>(x2), static_cast<uint16_t>(y1));
-
-            //std::cerr << "P4\n";
             const uint8_t p4 = pixel(static_cast<uint16_t>(x2), static_cast<uint16_t>(y2));
+
 
 	        image->pixel(xp, yp) = static_cast<uint8_t>(std::round(
             ((1 - ratioy) * (( (1 - ratiox) * p1 ) + ( ratiox * p3 )))
