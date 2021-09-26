@@ -30,7 +30,7 @@ int main( int argc, char* argv[] ) {
         //ofstream ofimgbis( "../ressources/chatbis.pgm", ios::binary );
         //gray->writePGM( ofimgbis );
 
-        //GrayImage imgcopy( *gray );
+        GrayImage imgcopy( *gray );
 
         //imgcopy.clear( 150 );
 
@@ -45,14 +45,14 @@ int main( int argc, char* argv[] ) {
         //ofstream ofimgrect( "../ressources/chatrect.pgm", ios::binary );
         //imgrect.writePGM( ofimgrect );
 
-        //ofstream ofimgclear( "../ressources/chatclear.pgm", ios::binary );
-        //imgcopy.writePGM( ofimgclear );
+        ofstream ofimgclear( "../ressources/chatclear.pgm", ios::binary );
+        imgcopy.writePGM( ofimgclear );
 
         std::ofstream of( "../ressources/chatbilinear.pgm", ios::binary );
         pbilinear->writePGM( of );
 
         std::ofstream off( "../ressources/chatscale.pgm", ios::binary );
-        pimg->writePGM(off);
+        pimg->writePGM( off );
 
 
 
