@@ -54,12 +54,6 @@ int main( int argc, char* argv[] ) {
         std::ofstream off( "../ressources/chatscale.pgm", ios::binary );
         pimg->writePGM( off );
 
-        std::vector<uint8_t> msg{1,5,8,64,57};
-
-        std::cout << "Courouc " << (int)( (++msg.begin()) - msg.begin() );
-
-
-
         //GrayImage shade(1,10, 10);
 
         /*
