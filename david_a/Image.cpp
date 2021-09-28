@@ -9,6 +9,7 @@
 #include <array>
 #include <vector>
 #include <cmath>
+#include <sstream>
 
 extern "C" {
 #include <jpeglib.h>
@@ -20,20 +21,31 @@ using invalidValue = std::runtime_error;
 
 using badValueOfGrayPixel = std::runtime_error;
 using badValueOfColorPixel = std::runtime_error;
+using badValuePixel = std::runtime_error;
 
 using invalidType = std::invalid_argument;
 using invalidWidth = std::invalid_argument;
 using invalidHeight = std::invalid_argument;
 using invalidIntensity = std::invalid_argument;
 using invalidPosition = std::invalid_argument;
+using invalidArray = std::invalid_argument;
 
-using Width = std::uint16_t;
-using Height = std::uint16_t;
+
+using WidthUnit = Width;
+using HeightUnit = Height;
+
+constexpr static auto maxWidth = std::numeric_limits<Width>::max();
+constexpr static auto maxHeight = std::numeric_limits<Height>::max();
+constexpr static auto maxGrayIntensity = std::numeric_limits<GrayShade>::max();
+
+constexpr static double mean( const double v1, const double v2 ) {
+    return (v1 + v2) / 2;
+}
 
 Color operator+( const Color& c1, const Color& c2 ) {
-    return { static_cast<uint8_t>((c1.r_ + c2.r_)/2.0),
-             static_cast<uint8_t>((c1.g_ + c2.g_)/2.0),
-             static_cast<uint8_t>((c1.b_ + c2.b_)/2.0)
+    return { static_cast<uint8_t>( std::round(::mean(c1.r_, c2.r_)) ),
+             static_cast<uint8_t>( std::round(::mean(c1.g_, c2.g_)) ),
+             static_cast<uint8_t>( std::round(::mean(c1.b_, c2.b_)) )
     };
 }
 Color operator*( const double alpha, const Color& c ) {
@@ -46,8 +58,11 @@ Color operator*( const Color& c, const double alpha ) {
     return operator*(alpha, c);
 }
 
+// THINK Déplacer les méthodes utilitaires dans un espace de noms dédiées
+
 /// Skip all comments up to a non-comment
 /// \param[in,out] input stream
+/// \exception THINK exception of input stream
 static void skip_comments( std::istream &is ) {
     // Detect the start of a comments
     while ( '#' == std::ws(is).peek() ) {
@@ -55,11 +70,17 @@ static void skip_comments( std::istream &is ) {
         is.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
     }
 }
+
+/// Skip one whitespace of the input stream
+/// \param[in,out] input stream
+/// \exception THINK exception of input stream
 static void skip_ONEwhitespace( std::istream& is ) {
-    const std::array<char,6> whitespace({ '\t', '\n', '\v',
+    constexpr std::array<char,6> whitespace({ '\t', '\n', '\v',
                                           '\f', '\r', ' '});
 
-    if ( std::binary_search(whitespace.begin(), whitespace.end(), is.peek()) ) {
+    const auto isWhiteSpace = std::binary_search(whitespace.cbegin(), whitespace.cend(), is.peek());
+
+    if ( isWhiteSpace ) {
         is.get();
     }
 }
@@ -69,7 +90,7 @@ static void skip_ONEwhitespace( std::istream& is ) {
 static bool isEndOfLine( const uint16_t pos, const uint16_t width, const uint16_t formatLimit ) {
     return ( 0 == ( pos % width ) ) || ( 0 == ( pos % formatLimit ) );
 }
-static void noData( std::istream& is ) {
+static void verifyStreamContainData( std::istream& is ) {
     // Actualisation du flux
     is.peek();
 
@@ -78,6 +99,7 @@ static void noData( std::istream& is ) {
     }
 }
 
+// Modify
 static void isGoodFormat( std::istream &is, const std::string &goodformat ) {
     std::string type;
 
@@ -89,9 +111,13 @@ static void isGoodFormat( std::istream &is, const std::string &goodformat ) {
 }
 
 template<typename Type>
-constexpr static void verifyOver0UnderLimitOf( const std::intmax_t value, const Type limit ) {
+static void verifyOver0UnderLimitOf( const std::intmax_t value, const Type limit ) {
     if ( ( 0 >= value ) || ( limit < value ) ) {
-        throw std::range_error( "Value out ]0,limit]" );
+        std::ostringstream oss( "Value out ]0, ", std::ios::ate );
+        oss << std::numeric_limits<std::intmax_t>::max();
+        oss << "]";
+
+        throw std::range_error( oss.str() );
     }
 }
 
@@ -133,6 +159,48 @@ static Unit readHeight( std::istream& is ) {
 
     return static_cast<Unit>(height);
 }
+
+template<typename Type>
+static void verifyIntensity( const std::intmax_t intensity, const Type limit ) {
+    try {
+        ::verifyOver0UnderLimitOf<Type>( intensity, limit );
+    }
+    catch ( const std::range_error& ) {
+        throw invalidIntensity( "Bad intensity of Image" );
+    }
+}
+
+
+template<typename TPixel>
+static void verifyPixel( const std::vector<TPixel>& pixels, const TPixel limit ) {
+    if ( limit < std::numeric_limits<TPixel>::max() ) {
+        const auto overLimit = [limit]( const TPixel pixel ) { return pixel > limit; };
+
+        const auto pos = std::find_if( pixels.cbegin(), pixels.cend(), overLimit );
+
+        if ( pos != pixels.cend() ) {
+            std::ostringstream oss( "Bad pixel at ", std::ios::ate );
+            oss << static_cast<std::intmax_t>( pos - pixels.cbegin() );
+            throw badValuePixel( oss.str() );
+        }
+    }
+}
+
+template<typename TPixel>
+static void verifySizeArray( const std::vector<TPixel>& pixels, const std::size_t maxSize ) {
+    if ( pixels.size() != maxSize ) {
+        throw invalidArray("The given array does not match with the size of Image");
+    }
+}
+
+template<typename Type>
+static void verifyPosition( const std::intmax_t x, const Type limit ) {
+    if ( limit <= x ) {
+        throw invalidPosition("The given position is invalid");
+    }
+}
+
+
 
 static uint8_t isGoodIntensity( std::istream &is, const uint8_t limit ) {
     int16_t intensity = 0;
@@ -233,44 +301,72 @@ static Color readGoodRawColorValue( std::istream& is, const uint8_t limit ) {
     return value;
 }
 
-// Définition of GrayImage's methods
+// Definition of GrayImage's methods
 
-GrayImage::GrayImage(const uint16_t width, const uint16_t height)
-: GrayImage(width, height, maxDefaultShades) {}
+// Public builders
+GrayImage::GrayImage( const std::intmax_t width, const std::intmax_t height )
+: GrayImage( width, height, defaultIntensity) {}
 
-GrayImage::GrayImage(const uint16_t width, const uint16_t height, const uint8_t intensity)
-: width_(width), height_(height), intensity_(intensity), pixels_( width_ * height_) {}
+GrayImage::GrayImage( const std::intmax_t width, const std::intmax_t height, const std::intmax_t intensity )
+: width_( static_cast<Width>(width) ), height_( static_cast<Height>(height) ),
+  intensity_( static_cast<GrayShade>(intensity) ), pixels_( width_ * height_ ) {
+    // Verify all preconditions
+    ::verifyWidth( width, ::maxWidth );
+    ::verifyHeight( height, ::maxHeight );
+    ::verifyIntensity( intensity, ::maxGrayIntensity );
 
-GrayImage::GrayImage(const uint16_t width, const uint16_t height, const uint8_t intensity, const std::vector<uint8_t>& pixels)
-: width_(width), height_(height), intensity_(intensity), pixels_(pixels) {}
-
-GrayImage::GrayImage(const uint16_t width, const uint16_t height, const uint8_t intensity, std::vector<uint8_t>&& pixels)
-: width_(width), height_(height), intensity_(intensity), pixels_(std::move(pixels)) {}
-
-uint8_t& GrayImage::pixel(const uint16_t x, const uint16_t y) {
-    ::isGoodPosition(x, getWidth());
-    ::isGoodPosition(y, getHeight());
-
-    return pixels_.at( ( width_ * y) + x);
-}
-const uint8_t& GrayImage::pixel(const uint16_t x, const uint16_t y) const {
-    ::isGoodPosition(x, getWidth());
-    ::isGoodPosition(y, getHeight());
-
-    return pixels_.at( ( width_ * y) + x);
+    // Fill the image with the default Color
+    clear();
 }
 
 
-void GrayImage::clear( const grayShade color ) {
+// Private builders
+GrayImage::GrayImage( const std::intmax_t width, const std::intmax_t height, const std::intmax_t intensity,
+                      const std::vector<GrayShade>& pixels )
+: width_( static_cast<Width>(width) ), height_( static_cast<Height>(height) ),
+  intensity_( static_cast<GrayShade>(intensity) ), pixels_( pixels) {
+    ::verifyWidth( width, ::maxWidth );
+    ::verifyHeight( height, ::maxHeight );
+    ::verifySizeArray( pixels_, width_ * height_ );
+    ::verifyIntensity( intensity, ::maxGrayIntensity );
+    ::verifyPixel( pixels_, intensity_ );
+}
+
+GrayImage::GrayImage(const std::intmax_t width, const std::intmax_t height, const std::intmax_t intensity, std::vector<uint8_t>&& pixels)
+: width_( static_cast<Width>(width) ), height_( static_cast<Height>(height) ),
+  intensity_( static_cast<GrayShade>(intensity) ), pixels_( std::move( pixels) ) {
+    ::verifyWidth( width, ::maxWidth );
+    ::verifyHeight( height, ::maxHeight );
+    ::verifySizeArray( pixels_, width_ * height_ );
+    ::verifyIntensity( intensity, ::maxGrayIntensity );
+    ::verifyPixel( pixels_, intensity_ );
+}
+
+
+uint8_t& GrayImage::pixel(const std::intmax_t x, const std::intmax_t y) {
+    ::verifyPosition(x, width_);
+    ::verifyPosition(y, height_);
+
+    return pixels_.at( static_cast<std::size_t>( ( width_ * y) + x) );
+}
+const uint8_t& GrayImage::pixel( const std::intmax_t x, const std::intmax_t y ) const {
+    ::verifyPosition(x, width_);
+    ::verifyPosition(y, height_);
+
+    return pixels_.at( static_cast<std::size_t>( ( width_ * y) + x) );
+}
+
+
+void GrayImage::clear( const GrayShade color ) {
     std::fill( pixels_.begin(), pixels_.end(), color);
 }
 
-void GrayImage::horizontalLine( const uint16_t x, const uint16_t y, const uint16_t length, const grayShade color ) {
+void GrayImage::horizontalLine( const uint16_t x, const uint16_t y, const uint16_t length, const GrayShade color ) {
     for ( uint16_t i = x; i < (x+length); ++i ) {
         pixel(i, y) = color;
     }
 }
-void GrayImage::verticalLine( const uint16_t x, const uint16_t y, const uint16_t length, const grayShade color ) {
+void GrayImage::verticalLine( const uint16_t x, const uint16_t y, const uint16_t length, const GrayShade color ) {
     for ( uint16_t j = y; j < (y+length); ++j ) {
         pixel(x, j) = color;
     }
@@ -278,7 +374,7 @@ void GrayImage::verticalLine( const uint16_t x, const uint16_t y, const uint16_t
 
 void GrayImage::rectangle( const uint16_t x, const uint16_t y,
                            const uint16_t width, const uint16_t height,
-                           const grayShade color) {
+                           const GrayShade color) {
     horizontalLine( x, y, width, color );
     horizontalLine( x, (y-1)+height, width, color );
 
@@ -389,7 +485,7 @@ GrayImage* GrayImage::readPGM( std::istream& is ) {
         image->pixels_[i] = ::readGoodGrayValue(is, intensity);
     }
 
-    ::noData( is );
+    ::verifyStreamContainData( is );
 
     return image;
 }
@@ -415,7 +511,7 @@ ColorImage* ColorImage::readPPM( std::istream& is ) {
         image->pixels_[i] = ::readGoodColorValue(is, intensity);
     }
 
-    ::noData( is );
+    ::verifyStreamContainData( is );
 
     return image;
 }
@@ -438,8 +534,14 @@ GrayImage *GrayImage::readPGM( std::istream &is ) {
     std::vector<uint8_t>pixels(width*height);
 
     // Expliquer la lecture
-    is.read(reinterpret_cast<char*>(pixels.data()),
-            static_cast<std::streamsize>(width * height * sizeof(uint8_t)));
+    // Attraper l'exception EOF, badRead(bad bit), fail bit
+    try {
+        is.read( reinterpret_cast<char*>(pixels.data()),
+                 static_cast<std::streamsize>(width * height * sizeof( uint8_t )) );
+    }
+    catch ( ... ) {
+        std::cerr << "Error occured ";
+    }
 
     ::isGoodGrayPixel(pixels.data(), intensity, width * height);
 
@@ -449,7 +551,7 @@ GrayImage *GrayImage::readPGM( std::istream &is ) {
 
     ::skip_ONEwhitespace(is);
 
-    ::noData(is);
+    ::verifyStreamContainData( is );
 
     return image;
 }
