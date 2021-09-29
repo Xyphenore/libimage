@@ -21,6 +21,7 @@ using Width = std::uint16_t;
 using Height = std::uint16_t;
 using GrayShade = std::uint8_t;
 
+
 /// Represents the format of the read or written image with Px format
 enum class Format : bool {ASCII = false , BINARY = true};
 
@@ -47,25 +48,25 @@ public:
 
     /// Build a grayImage with the given width, height and the default intensity
     /// The built image was colored with the default Color
-    /// \pre The given width needs to be greater than 0 and less than maximum of the maximum width
-    /// \pre The given height needs to be greater than 0 and less than maximum of the maximum height
+    /// \pre The given width needs to be greater than 0 and less or equal than maximum width
+    /// \pre The given height needs to be greater than 0 and less or equal than maximum height
     /// \post getWidth == given width
     /// \post getHeight == given height
-    /// \exception invalidWidth if the given width is outside ]0; maxWidth[
-    /// \exception invalidHeight if the given height is outside ]0;maxHeight[
+    /// \exception invalidWidth if the given width is outside ]0; maxWidth]
+    /// \exception invalidHeight if the given height is outside ]0;maxHeight]
     /// \exception std::bad_alloc if the memory allocation fails
     GrayImage( std::intmax_t width, std::intmax_t height );
 
     /// Build a grayImage with the given width, height and intensity
     /// The built image was colored with the default Color
-    /// \pre The given width needs to be greater than 0 and less than maximum of the maximum width
-    /// \pre The given height needs to be greater than 0 and less than maximum of the maximum height
-    /// \pre The given intensity needs to be greater than 0 and less than maximum of the maximum intensity
+    /// \pre The given width needs to be greater than 0 and less or equal than maximum width
+    /// \pre The given height needs to be greater than 0 and less or equal than maximum height
+    /// \pre The given intensity needs to be greater or equal than 0 and less or equal than maximum intensity
     /// \post getWidth was equal to the given width
     /// \post getHeight was equal to the given height
     /// \post The intensity of Image was equal to the given intensity
-    /// \exception invalidWidth if the given width is outside ]0; maxWidth[
-    /// \exception invalidHeight if the given height is outside ]0;maxHeight[
+    /// \exception invalidWidth if the given width is outside ]0; maxWidth]
+    /// \exception invalidHeight if the given height is outside ]0;maxHeight]
     /// \exception invalidIntensity if the given intensity is outside [0;maxShades]
     /// \exception std::bad_alloc if the memory allocation fails
     GrayImage( std::intmax_t width, std::intmax_t height, std::intmax_t intensity );
@@ -94,25 +95,27 @@ public:
 
 
     /// \return A constant reference of the width of Image
-    const uint16_t& getWidth() const noexcept;
+    const Width& getWidth() const noexcept;
 
     /// \return A constant reference of the height of Image
-    const uint16_t& getHeight() const noexcept;
+    const Height& getHeight() const noexcept;
 
 
 
     /// \return A reference of the pixel at the position x,y
     /// \param[in] position x,y
-    /// \exception invalidPosition if x >= width_ or y >= height_
+    /// \exception invalidPosition if x is not in [0; width[
+    /// \exception invalidPosition if y is not int [0; height[
     /// \exception std::out_of_range if ( width_ * y + x ) >= width_ * height_
     /// \warning Don't verify the value affected in the selected pixel
-    uint8_t& pixel( std::intmax_t x, std::intmax_t y );
+    GrayShade& pixel( std::intmax_t x, std::intmax_t y );
 
     /// \return A constant reference of the pixel at the position x,y
     /// \param[in] position x,y
-    /// \exception invalidPosition if x >= width_ or y >= height_
+    /// \exception invalidPosition if x is not in [0; width[
+    /// \exception invalidPosition if y is not int [0; height[
     /// \exception std::out_of_range if ( width_ * y + x ) >= width_ * height_
-    const uint8_t& pixel( std::intmax_t x, std::intmax_t y ) const;
+    const GrayShade& pixel( std::intmax_t x, std::intmax_t y ) const;
 
 
 
@@ -124,12 +127,12 @@ public:
     /// \pre The given color needs to be in gray's shades in [0, maxIntensity]
     /// \post The image fills with the given color
     [[ deprecated ("Please use the method fill, it has more sense") ]]
-    void clear( GrayShade color );
+    void clear( std::intmax_t color );
 
     /// Fill the image with the given color
     /// \pre Needs a color in gray's shades so in [0, maxIntensity]
     /// \post The same image but fill with the given color
-    void fill( GrayShade color );
+    void fill( std::intmax_t color );
 
 
 
@@ -138,13 +141,13 @@ public:
     /// \pre The given coordinate x needs to be in [0, image's width[
     /// \pre The given coordinate y needs to be in [0, image's height[
     /// \pre The given width needs to respect this : given x + given width needs to be in ]0; image's width - given x[
-    /// \pre The given height needs to respect this : given y + given height needs to be in ]0; image's height - y[
+    /// \pre The given height needs to respect this : given y + given height needs to be in ]0; image's height - given y[
     /// \post The same given image with the desired rectangle
     /// \exception invalidWidth if width does not in ]0; image's width[
     /// \exception invalidHeight if height does not in ]0; image's height[
     /// \exception invalidCoordinateX if x does not in [0; image's width[
     /// \exception invalidCoordinateY if y does not in [0; image's height[
-    void rectangle( uint16_t x, uint16_t y, uint16_t width, uint16_t height );
+    void rectangle( std::intmax_t x, std::intmax_t y, std::intmax_t width, std::intmax_t height );
 
     /// Draw a rectangle with the given width and height and with it top left corner at the position x,y
     /// The drawn rectangle has a thickness of 1 pixel and the given color
@@ -159,7 +162,7 @@ public:
     /// \exception invalidCoordinateX if x does not in [0; image's width[
     /// \exception invalidCoordinateY if y does not in [0; image's height[
     /// \exception invalidColor if color does not in [0; image's intensity]
-    void rectangle( uint16_t x, uint16_t y, uint16_t width, uint16_t height, GrayShade color );
+    void rectangle( std::intmax_t x, std::intmax_t y, std::intmax_t width, std::intmax_t height, std::intmax_t color );
 
     /// Draw a filled rectangle with the given width and height and with it top left corner at the position x,y
     /// The drawn rectangle has a thickness of 1 pixel and the default Color
@@ -172,7 +175,7 @@ public:
     /// \exception invalidHeight if height does not in ]0; image's height[
     /// \exception invalidCoordinateX if x does not in [0; image's width[
     /// \exception invalidCoordinateY if y does not in [0; image's height[
-    void fillRectangle( uint16_t x, uint16_t y, uint16_t width, uint16_t height );
+    void fillRectangle( std::intmax_t x, std::intmax_t y, std::intmax_t width, std::intmax_t height );
 
     /// Draw a filled rectangle with the given width and height and with it top left corner at the position x,y
     /// The drawn rectangle has a thickness of 1 pixel and the given color
@@ -187,7 +190,7 @@ public:
     /// \exception invalidCoordinateX if x does not in [0; image's width[
     /// \exception invalidCoordinateY if y does not in [0; image's height[
     /// \exception invalidColor if color does not in [0; image's intensity]
-    void fillRectangle( uint16_t x, uint16_t y, uint16_t width, uint16_t height, GrayShade color );
+    void fillRectangle( std::intmax_t x, std::intmax_t y, std::intmax_t width, std::intmax_t height, std::intmax_t color );
 
 
 
@@ -199,7 +202,7 @@ public:
     /// \exception invalidCoordinateX if x does not in [0; image's width[
     /// \exception invalidCoordinateY if y does not in [0; image's height[
     /// \exception invalidLength if length does not in ]0; image's width - x[
-    void horizontalLine( uint16_t x, uint16_t y, uint16_t length );
+    void horizontalLine( std::intmax_t x, std::intmax_t y, std::intmax_t length );
 
     /// Draw a 1 pixel of thickness horizontal line, in the given color, with the given length and it left point at the given position x,y
     /// \pre x needs to be in [0, image's width[
@@ -211,7 +214,7 @@ public:
     /// \exception invalidCoordinateY if y does not in [0; image's height[
     /// \exception invalidLength if length does not in ]0; image's width - x[
     /// \exception invalidColor if color does not in [0, image's intensity]
-    void horizontalLine( uint16_t x, uint16_t y, uint16_t length, GrayShade color );
+    void horizontalLine( std::intmax_t x, std::intmax_t y, std::intmax_t length, std::intmax_t color );
 
     /// Draw a 1 pixel of thickness vertical line, in default Color, with the given length and it top point at the given position x,y
     /// \pre x needs to be in [0, image's width[
@@ -221,7 +224,7 @@ public:
     /// \exception invalidCoordinateX if x does not in [0; image's width[
     /// \exception invalidCoordinateY if y does not in [0; image's height[
     /// \exception invalidLength if length does not in ]0; image's height - y[
-    void verticalLine( uint16_t x, uint16_t y, uint16_t length );
+    void verticalLine( std::intmax_t x, std::intmax_t y, std::intmax_t length );
 
     /// Draw a 1 pixel of thickness vertical line, in the given Color, with the given length and it top point at the given position x,y
     /// \pre x needs to be in [0, image's width[
@@ -233,27 +236,27 @@ public:
     /// \exception invalidCoordinateY if y does not in [0; image's height[
     /// \exception invalidLength if length does not in ]0; image's height - y[
     /// \exception invalidColor if color does not in [0, image's intensity]
-    void verticalLine( uint16_t x, uint16_t y, uint16_t length, GrayShade color );
+    void verticalLine( std::intmax_t x, std::intmax_t y, std::intmax_t length, std::intmax_t color );
 
 
 
     /// Created the same image of called image, but scale to newWidth and newHeight, with the algorithm of simple scale
     /// \warning You have the responsibility of the created image
-    /// \pre newWidth needs to be in ]0; maxInt[
-    /// \pre newHeight needs to be in ]0; maxInt[
+    /// \pre newWidth needs to be in ]0; maxWidth]
+    /// \pre newHeight needs to be in ]0; maxHeight]
     /// \post The same image of called image with the dimension of newWidth and newHeight
-    /// \exception invalidWidth if newWidth does not in ]0; maxInt[
-    /// \exception invalidHeight if newHeight does not in ]0; maxInt[
-    GrayImage* simpleScale( uint16_t newWidth, uint16_t newHeight ) const;
+    /// \exception invalidWidth if newWidth does not in ]0; maxWidth]
+    /// \exception invalidHeight if newHeight does not in ]0; maxHeight]
+    GrayImage* simpleScale( std::intmax_t newWidth, std::intmax_t newHeight ) const;
 
     /// Created the same image of called image, but scale to newWidth and newHeight, with the algorithm of bilinear scale
     /// \warning You have the responsibility of the created image
-    /// \pre newWidth needs to be in ]0; maxInt[
-    /// \pre newHeight needs to be in ]0; maxInt[
+    /// \pre newWidth needs to be in ]0; maxWidth]
+    /// \pre newHeight needs to be in ]0; maxHeight]
     /// \post The same image of called image with the dimension of newWidth and newHeight
-    /// \exception invalidWidth if newWidth does not in ]0; maxInt[
-    /// \exception invalidHeight if newHeight does not in ]0; maxInt[
-    GrayImage* bilinearScale( uint16_t newWidth, uint16_t newHeight ) const;
+    /// \exception invalidWidth if newWidth does not in ]0; maxWidth]
+    /// \exception invalidHeight if newHeight does not in ]0; maxHeight]
+    GrayImage* bilinearScale( std::intmax_t newWidth, std::intmax_t newHeight ) const;
 
 
 
@@ -374,17 +377,17 @@ private:
     /// Build a gray Image with the given width, height, intensity and the vector of shades
     /// \warning This builder build a copy of the given vector
     /// \deprecated Because this builder copy the vector of shades, please use the builder who move the vector, it is more efficient
-    /// \pre The given width needs to be greater than 0 and less than maximum of the maximum width
-    /// \pre The given height needs to be greater than 0 and less than maximum of the maximum height
-    /// \pre The given intensity needs to be greater than 0 and less than maximum of the maximum intensity
+    /// \pre The given width needs to be greater than 0 and less or equal than maximum width
+    /// \pre The given height needs to be greater than 0 and less or equal than maximum height
+    /// \pre The given intensity needs to be greater or equal than 0 and less or equal than maximum intensity
     /// \pre The given vector of shades needs to have it size equal to width * height
     /// \pre The given vector of shades needs to have all of it pixels to be in [0;intensity]
     /// \post getWidth was equal to the given width
     /// \post getHeight was equal to the given height
     /// \post The intensity of Image was equal to the given intensity
     /// \post The built image contains the same vector, and same representation of the pixels
-    /// \exception invalidWidth if the given width is outside ]0; maxWidth[
-    /// \exception invalidHeight if the given height is outside ]0;maxHeight[
+    /// \exception invalidWidth if the given width is outside ]0; maxWidth]
+    /// \exception invalidHeight if the given height is outside ]0;maxHeight]
     /// \exception invalidIntensity if the given intensity is outside [0;maxShades]
     /// \exception invalidArray if the given vector don't have the good size like vector_size == width * height
     /// \exception badValuePixel if a pixel in the given vector, have a value above the intensity
@@ -393,17 +396,17 @@ private:
 
     /// Build a gray Image with the given width and height, intensity and the vector of shades
     /// \warning This builder move the given vector
-    /// \pre The given width needs to be greater than 0 and less than maximum of the maximum width
-    /// \pre The given height needs to be greater than 0 and less than maximum of the maximum height
-    /// \pre The given intensity needs to be greater than 0 and less than maximum of the maximum intensity
+    /// \pre The given width needs to be greater than 0 and less or equal than maximum width
+    /// \pre The given height needs to be greater than 0 and less or equal than maximum height
+    /// \pre The given intensity needs to be greater or equal than 0 and less or equal than maximum intensity
     /// \pre The given vector of shades needs to have it size equal to width * height
     /// \pre The given vector of shades needs to have all of it pixels to be in [0;intensity]
     /// \post getWidth was equal to the given width
     /// \post getHeight was equal to the given height
     /// \post The intensity of Image was equal to the given intensity
     /// \post The built image contains the given vector, so same representation of the pixels
-    /// \exception invalidWidth if the given width is outside ]0; maxWidth[
-    /// \exception invalidHeight if the given height is outside ]0;maxHeight[
+    /// \exception invalidWidth if the given width is outside ]0; maxWidth]
+    /// \exception invalidHeight if the given height is outside ]0;maxHeight]
     /// \exception invalidIntensity if the given intensity is outside [0;maxShades]
     /// \exception invalidArray if the given vector don't have the good size like vector_size == width * height
     /// \exception badValuePixel if a pixel in the given vector, have a value above the intensity
@@ -416,18 +419,21 @@ inline const uint16_t& GrayImage::getHeight() const noexcept { return height_; }
 inline void GrayImage::writePGM( std::ostream& os ) const { writePGM(os, Format::BINARY); }
 
 inline void GrayImage::clear() { fill(defaultColor); }
-inline void GrayImage::horizontalLine( const uint16_t x, const uint16_t y, const uint16_t length ) {
+inline void GrayImage::clear( const std::intmax_t color ) { fill( color ); }
+
+inline void GrayImage::horizontalLine( const std::intmax_t x, const std::intmax_t y, const std::intmax_t length ) {
     horizontalLine(x,y,length,defaultColor);
 }
-inline void GrayImage::verticalLine( const uint16_t x, const uint16_t y, const uint16_t length ) {
+inline void GrayImage::verticalLine( const std::intmax_t x, const std::intmax_t y, const std::intmax_t length ) {
     verticalLine(x,y,length,defaultColor);
 }
-inline void GrayImage::rectangle( const uint16_t x, const uint16_t y,
-                                  const uint16_t width, const uint16_t height ) {
+
+inline void GrayImage::rectangle( const std::intmax_t x, const std::intmax_t y,
+                                  const std::intmax_t width, const std::intmax_t height ) {
     rectangle(x,y,width,height,defaultColor);
 }
-inline void GrayImage::fillRectangle( const uint16_t x, const uint16_t y,
-                                      const uint16_t width, const uint16_t height ) {
+inline void GrayImage::fillRectangle( const std::intmax_t x, const std::intmax_t y,
+                                      const std::intmax_t width, const std::intmax_t height ) {
     fillRectangle(x,y,width,height, defaultColor);
 }
 
@@ -452,9 +458,9 @@ public:
 
     ColorImage( uint16_t width, uint16_t height, uint8_t intensity );
 
-    ColorImage( const ColorImage& src );
+    ColorImage( const ColorImage& src ) = default;
 
-    ~ColorImage();
+    ~ColorImage() noexcept = default;
 
     ColorImage& operator=( const ColorImage& src ) = delete;
 
@@ -484,7 +490,7 @@ public:
         return new ColorImage( 0, 0 );
     };
 
-    void writePPM( std::ostream& os ) const;
+    void writePPM( std::ostream& os, Format f ) const;
 
     void writeTGA( std::ostream& os, bool compressed ) const {
         return;
@@ -495,7 +501,7 @@ private :
     uint16_t height_;
     uint8_t intensity_;
 
-    Color* pixels{ nullptr };
+    std::vector<Color> pixels_;
 };
 
 inline const uint16_t& ColorImage::getWidth() const { return width_; }
