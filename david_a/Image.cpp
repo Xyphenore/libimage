@@ -358,6 +358,10 @@ const uint8_t& GrayImage::pixel( const std::intmax_t x, const std::intmax_t y ) 
 
 
 void GrayImage::clear( const GrayShade color ) {
+    fill( color );
+}
+
+void GrayImage::fill( const GrayShade color ) {
     std::fill( pixels_.begin(), pixels_.end(), color);
 }
 
@@ -688,6 +692,9 @@ ColorImage* ColorImage::simpleScale( const uint16_t width, const uint16_t height
 }
 
 GrayImage* GrayImage::bilinearScale( const Width newWidth, const Height newHeight ) const {
+    // Peut simplifier la valeur de y2 et x2 car la division en bas vaut toujours 1
+    // Car y2 = std::ceil(y) ou bien y2 = y1 + 1 = std::floor(y) + 1
+    // Donc ratioY = (y -y1) / (y2 - y1) = y - y1
     ::verifyWidth( newWidth, std::numeric_limits<Width>::max() );
 
     ::verifyHeight( newHeight, std::numeric_limits<Height>::max() );
@@ -732,7 +739,7 @@ GrayImage* GrayImage::bilinearScale( const Width newWidth, const Height newHeigh
                 + ( ratioY * ((( 1 - ratioX ) * p2 ) + ( ratioX * p4 )))
                 ));
         }
-	}
+    }
 
     return new GrayImage(newWidth, newHeight, intensity_, std::move(pixels));
 }
