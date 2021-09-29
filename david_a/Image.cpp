@@ -257,14 +257,18 @@ static void isGoodPosition( const uint16_t x, const uint16_t limit ) {
 static void isGoodGrayPixel( const uint8_t* const pixels, const uint8_t limit, const uint16_t length ) {
     for ( uint16_t i = 0; i < length; ++i ) {
         if ( pixels[i] > limit ) {
-            throw badValueOfGrayPixel( "Bad value of gray pixel at positon " + i);
+            std::ostringstream oss("Bad value of gray pixel at positon ");
+            oss << i;
+            throw badValueOfGrayPixel( oss.str() );
         }
     }
 }
 static void isGoodColorPixel( const Color* const pixels, const uint8_t limit, const uint16_t length ) {
     for ( uint16_t i = 0; i < length; ++i ) {
         if ( (pixels[i].r_ > limit) || (pixels[i].g_ > limit) || (pixels[i].b_ > limit) ) {
-            throw badValueOfColorPixel( "Bad value of pixel at positon " + i);
+            std::ostringstream oss("Bad value of pixel at positon ");
+            oss << i;
+            throw badValueOfColorPixel( oss.str());
         }
     }
 }
