@@ -84,17 +84,22 @@ public:
     /// Delete the given grayImage
     ~GrayImage() noexcept = default;
 
+
     /// \warning Can't affect another image to a built image
     GrayImage& operator=( const GrayImage& ) = delete;
 
     /// \warning Can't affect another image to a built image
     GrayImage& operator=( GrayImage&& ) noexcept = delete;
 
+
+
     /// \return A constant reference of the width of Image
     const uint16_t& getWidth() const noexcept;
 
     /// \return A constant reference of the height of Image
     const uint16_t& getHeight() const noexcept;
+
+
 
     /// \return A reference of the pixel at the position x,y
     /// \param[in] position x,y
@@ -110,28 +115,181 @@ public:
     const uint8_t& pixel( std::intmax_t x, std::intmax_t y ) const;
 
 
-    // Continuer la documentation
+
+    /// Clear the image, so the image was fill by the default Color
     void clear();
+
+    /// Clear the image, so fill the image with the given color
+    /// \deprecated Please use the method fill, it has more sense
+    /// \pre The given color needs to be in gray's shades in [0, maxIntensity]
+    /// \post The image fills with the given color
+    [[ deprecated ("Please use the method fill, it has more sense") ]]
     void clear( GrayShade color );
 
+    /// Fill the image with the given color
+    /// \pre Needs a color in gray's shades so in [0, maxIntensity]
+    /// \post The same image but fill with the given color
+    void fill( GrayShade color );
+
+
+
+    /// Draw a rectangle with the given width and height and with it top left corner at the position x,y
+    /// The drawn rectangle has a thickness of 1 pixel and the default Color
+    /// \pre The given coordinate x needs to be in [0, image's width[
+    /// \pre The given coordinate y needs to be in [0, image's height[
+    /// \pre The given width needs to respect this : given x + given width needs to be in ]0; image's width - given x[
+    /// \pre The given height needs to respect this : given y + given height needs to be in ]0; image's height - y[
+    /// \post The same given image with the desired rectangle
+    /// \exception invalidWidth if width does not in ]0; image's width[
+    /// \exception invalidHeight if height does not in ]0; image's height[
+    /// \exception invalidCoordinateX if x does not in [0; image's width[
+    /// \exception invalidCoordinateY if y does not in [0; image's height[
     void rectangle( uint16_t x, uint16_t y, uint16_t width, uint16_t height );
+
+    /// Draw a rectangle with the given width and height and with it top left corner at the position x,y
+    /// The drawn rectangle has a thickness of 1 pixel and the given color
+    /// \pre The given coordinate x needs to be in [0, image's width[
+    /// \pre The given coordinate y needs to be in [0, image's height[
+    /// \pre The given width needs to respect this : given x + given width needs to be in ]0; image's width - given x[
+    /// \pre The given height needs to respect this : given y + given height needs to be in ]0; image's height - y[
+    /// \pre The given color needs to be a gray's shade in [0; image's intensity]
+    /// \post The same given image with the desired rectangle
+    /// \exception invalidWidth if width does not in ]0; image's width[
+    /// \exception invalidHeight if height does not in ]0; image's height[
+    /// \exception invalidCoordinateX if x does not in [0; image's width[
+    /// \exception invalidCoordinateY if y does not in [0; image's height[
+    /// \exception invalidColor if color does not in [0; image's intensity]
     void rectangle( uint16_t x, uint16_t y, uint16_t width, uint16_t height, GrayShade color );
+
+    /// Draw a filled rectangle with the given width and height and with it top left corner at the position x,y
+    /// The drawn rectangle has a thickness of 1 pixel and the default Color
+    /// \pre The given coordinate x needs to be in [0, image's width[
+    /// \pre The given coordinate y needs to be in [0, image's height[
+    /// \pre The given width needs to respect this : given x + given width needs to be in ]0; image's width - given x[
+    /// \pre The given height needs to respect this : given y + given height needs to be in ]0; image's height - y[
+    /// \post The same given image with the desired rectangle
+    /// \exception invalidWidth if width does not in ]0; image's width[
+    /// \exception invalidHeight if height does not in ]0; image's height[
+    /// \exception invalidCoordinateX if x does not in [0; image's width[
+    /// \exception invalidCoordinateY if y does not in [0; image's height[
     void fillRectangle( uint16_t x, uint16_t y, uint16_t width, uint16_t height );
+
+    /// Draw a filled rectangle with the given width and height and with it top left corner at the position x,y
+    /// The drawn rectangle has a thickness of 1 pixel and the given color
+    /// \pre The given coordinate x needs to be in [0, image's width[
+    /// \pre The given coordinate y needs to be in [0, image's height[
+    /// \pre The given width needs to respect this : given x + given width needs to be in ]0; image's width - given x[
+    /// \pre The given height needs to respect this : given y + given height needs to be in ]0; image's height - y[
+    /// \pre The given color needs to be a gray's shade in [0; image's intensity]
+    /// \post The same given image with the desired rectangle
+    /// \exception invalidWidth if width does not in ]0; image's width[
+    /// \exception invalidHeight if height does not in ]0; image's height[
+    /// \exception invalidCoordinateX if x does not in [0; image's width[
+    /// \exception invalidCoordinateY if y does not in [0; image's height[
+    /// \exception invalidColor if color does not in [0; image's intensity]
     void fillRectangle( uint16_t x, uint16_t y, uint16_t width, uint16_t height, GrayShade color );
 
+
+
+    /// Draw a 1 pixel of thickness horizontal line, in default Color, with the given length and it left point at the given position x,y
+    /// \pre x needs to be in [0, image's width[
+    /// \pre y needs to be in [0; image's height[
+    /// \pre length needs to be in ]0; image's width - x[
+    /// \post The same image with the desired horizontal line
+    /// \exception invalidCoordinateX if x does not in [0; image's width[
+    /// \exception invalidCoordinateY if y does not in [0; image's height[
+    /// \exception invalidLength if length does not in ]0; image's width - x[
     void horizontalLine( uint16_t x, uint16_t y, uint16_t length );
+
+    /// Draw a 1 pixel of thickness horizontal line, in the given color, with the given length and it left point at the given position x,y
+    /// \pre x needs to be in [0, image's width[
+    /// \pre y needs to be in [0; image's height[
+    /// \pre length needs to be in ]0; image's width - x[
+    /// \pre color needs to be a gray's shade in [0, image's intensity]
+    /// \post The same image with the desired horizontal line
+    /// \exception invalidCoordinateX if x does not in [0; image's width[
+    /// \exception invalidCoordinateY if y does not in [0; image's height[
+    /// \exception invalidLength if length does not in ]0; image's width - x[
+    /// \exception invalidColor if color does not in [0, image's intensity]
     void horizontalLine( uint16_t x, uint16_t y, uint16_t length, GrayShade color );
+
+    /// Draw a 1 pixel of thickness vertical line, in default Color, with the given length and it top point at the given position x,y
+    /// \pre x needs to be in [0, image's width[
+    /// \pre y needs to be in [0; image's height[
+    /// \pre length needs to be in ]0; image's height - y[
+    /// \post The same image with the desired vertical line
+    /// \exception invalidCoordinateX if x does not in [0; image's width[
+    /// \exception invalidCoordinateY if y does not in [0; image's height[
+    /// \exception invalidLength if length does not in ]0; image's height - y[
     void verticalLine( uint16_t x, uint16_t y, uint16_t length );
+
+    /// Draw a 1 pixel of thickness vertical line, in the given Color, with the given length and it top point at the given position x,y
+    /// \pre x needs to be in [0, image's width[
+    /// \pre y needs to be in [0; image's height[
+    /// \pre length needs to be in ]0; image's height - y[
+    /// \pre color needs to be a gray's shade in [0, image's intensity]
+    /// \post The same image with the desired vertical line
+    /// \exception invalidCoordinateX if x does not in [0; image's width[
+    /// \exception invalidCoordinateY if y does not in [0; image's height[
+    /// \exception invalidLength if length does not in ]0; image's height - y[
+    /// \exception invalidColor if color does not in [0, image's intensity]
     void verticalLine( uint16_t x, uint16_t y, uint16_t length, GrayShade color );
 
+
+
+    /// Created the same image of called image, but scale to newWidth and newHeight, with the algorithm of simple scale
+    /// \warning You have the responsibility of the created image
+    /// \pre newWidth needs to be in ]0; maxInt[
+    /// \pre newHeight needs to be in ]0; maxInt[
+    /// \post The same image of called image with the dimension of newWidth and newHeight
+    /// \exception invalidWidth if newWidth does not in ]0; maxInt[
+    /// \exception invalidHeight if newHeight does not in ]0; maxInt[
     GrayImage* simpleScale( uint16_t newWidth, uint16_t newHeight ) const;
+
+    /// Created the same image of called image, but scale to newWidth and newHeight, with the algorithm of bilinear scale
+    /// \warning You have the responsibility of the created image
+    /// \pre newWidth needs to be in ]0; maxInt[
+    /// \pre newHeight needs to be in ]0; maxInt[
+    /// \post The same image of called image with the dimension of newWidth and newHeight
+    /// \exception invalidWidth if newWidth does not in ]0; maxInt[
+    /// \exception invalidHeight if newHeight does not in ]0; maxInt[
     GrayImage* bilinearScale( uint16_t newWidth, uint16_t newHeight ) const;
 
-    // PGM a 2 formats le P2 et le P5, il faut donc différencier les deux
+
+
+    /// Write in the given output stream the called image in the P5 format
+    /// \note Check the representation of Px format : https://en.wikipedia.org/wiki/Netpbm
+    /// \note Or : http://netpbm.sourceforge.net/doc/pgm.html
+    /// \note All comments are skipped
+    /// \note We support only one image per file, in any format
+    /// \pre A good output stream
+    /// \post The called image was output in the given the stream
     void writePGM( std::ostream& os ) const;
+
+    /// Write in the given output stream the called image in the given format {ASCII or BINARY}
+    /// \note Check the representation of Px format : https://en.wikipedia.org/wiki/Netpbm
+    /// \note Or : http://netpbm.sourceforge.net/doc/pgm.html
+    /// \note All comments are skipped
+    /// \note We support only one image per file, in any format
+    /// \pre A good output stream
+    /// \post The called image was output in the given the stream
     void writePGM( std::ostream& os, Format f ) const;
+
+    /// Write in the given output stream the called image in the format TARGA
+    /// \note Check the representation of TARGA format : URL
+    /// \note Or : URL
+    /// \pre A good output stream
+    /// \post The called image was output in the given the stream
     void writeTGA( std::ostream& os ) const;
+
+    /// Write in the given output stream the called image in the format JPEG
+    /// \note Check the representation of JPEG format : URL
+    /// \note Or : URL
+    /// \pre A good output stream
+    /// \post The called image was output in the given the stream
     void writeJPEG( std::ostream& os ) const;
+
+
 
     /// Read the given input stream and create a gray Image
     /// \note Check the representation of Px format : https://en.wikipedia.org/wiki/Netpbm
@@ -139,7 +297,7 @@ public:
     /// \note All comments are skipped
     /// \note We support only one image per file, in any format
     /// \warning You have the responsibility to manage and delete the created image
-    /// \warning After we read value of pixels, the stream don't contain any data
+    /// \warning After we read value of pixels, the stream needs to contain any data
     /// \return A raw pointe to the built image
     /// \pre The given stream needs to respect the Px format and this case the P2 or P5
     /// \pre The width in the input stream needs to be in ]0; maxWidth]
@@ -158,9 +316,53 @@ public:
     /// \exception invalidSizeRepresentationPixel if the END OF STREAM was encountered before the reach width * height pixels
     static GrayImage* readPGM( std::istream& is );
 
-
+    /// Read the given input stream and create a gray Image
+    /// \note Check the representation of TARGA format : URL
+    /// \note Or : URL
+    /// \warning You have the responsibility to manage and delete the created image
+    /// \warning After we read value of pixels, the stream needs to contain any data
+    /// \return A raw pointe to the built image
+    /// \pre The given stream needs to respect the TARGA format
+    /// \pre The width in the input stream needs to be in ]0; maxWidth]
+    /// \pre The height in the input stream needs to be in ]0; maxHeight]
+    /// \pre The intensity in the input stream needs to be in ]0; maxIntensity]
+    /// \pre The value of pixels needs to be in the range of [0,intensity]
+    /// \pre The representation of pixels needs to have a length equals to width * height
+    /// \post An image sized to width on height, with depth equals to intensity, and pixels equals to value of pixels in the stream
+    /// \exception invalidType if the type of format don't match with TARGA format
+    /// \exception invalidWidth if the width in the stream was not in [0, maxWidth]
+    /// \exception invalidHeight if the height in the stream was not in ]0; maxHeight]
+    /// \exception invalidIntensity if the intensity in the stream was not in [0, maxIntensity]
+    /// \exception invalidPixels if any of read pixels is not in the range of [0, intensity]
+    /// \exception std::bad_alloc if the memory allocation failed
+    /// \exception alwaysData if the stream always contains data
+    /// \exception invalidSizeRepresentationPixel if the END OF STREAM was encountered before the reach width * height pixels
     static GrayImage* readTGA( std::istream& is );
+
+    /// Read the given input stream and create a gray Image
+    /// \note Check the representation of JPEG format : URL
+    /// \note Or : URL
+    /// \warning You have the responsibility to manage and delete the created image
+    /// \warning After we read value of pixels, the stream needs to contain any data
+    /// \return A raw pointe to the built image
+    /// \pre The given stream needs to respect the JPEG format
+    /// \pre The width in the input stream needs to be in ]0; maxWidth]
+    /// \pre The height in the input stream needs to be in ]0; maxHeight]
+    /// \pre The intensity in the input stream needs to be in ]0; maxIntensity]
+    /// \pre The value of pixels needs to be in the range of [0,intensity]
+    /// \pre The representation of pixels needs to have a length equals to width * height
+    /// \post An image sized to width on height, with depth equals to intensity, and pixels equals to value of pixels in the stream
+    /// \exception invalidType if the type of format don't match with JPEG format
+    /// \exception invalidWidth if the width in the stream was not in [0, maxWidth]
+    /// \exception invalidHeight if the height in the stream was not in ]0; maxHeight]
+    /// \exception invalidIntensity if the intensity in the stream was not in [0, maxIntensity]
+    /// \exception invalidPixels if any of read pixels is not in the range of [0, intensity]
+    /// \exception std::bad_alloc if the memory allocation failed
+    /// \exception alwaysData if the stream always contains data
+    /// \exception invalidSizeRepresentationPixel if the END OF STREAM was encountered before the reach width * height pixels
     static GrayImage* readJPEG( std::istream& is );
+
+
 
 private:
     const Width width_;
@@ -213,7 +415,7 @@ inline const uint16_t& GrayImage::getHeight() const noexcept { return height_; }
 
 inline void GrayImage::writePGM( std::ostream& os ) const { writePGM(os, Format::BINARY); }
 
-inline void GrayImage::clear() { clear(defaultColor); }
+inline void GrayImage::clear() { fill(defaultColor); }
 inline void GrayImage::horizontalLine( const uint16_t x, const uint16_t y, const uint16_t length ) {
     horizontalLine(x,y,length,defaultColor);
 }
