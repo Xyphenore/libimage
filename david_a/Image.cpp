@@ -39,8 +39,8 @@ namespace imageUtils {
     constexpr static auto maxHeight = std::numeric_limits<Height>::max();
     constexpr static auto maxIntensity = std::numeric_limits<Shade>::max();
 
-    constexpr static double mean( const double v1, const double v2 ) {
-        return (v1 + v2) / 2;
+    constexpr static double meanIfOver255( const double v1, const double v2 ) {
+        return ( (v1 + v2) > 255 ? (v1 + v2)/2 : (v1 + v2) );
     }
 
     /// Skip all comments up to a non-comment
@@ -226,9 +226,9 @@ namespace imageUtils {
 
 // Definitions of Color
 static Color operator+( const Color& c1, const Color& c2 ) {
-    return { static_cast<uint8_t>( std::round( imageUtils::mean( c1.r_, c2.r_)) ),
-             static_cast<uint8_t>( std::round( imageUtils::mean( c1.g_, c2.g_)) ),
-             static_cast<uint8_t>( std::round( imageUtils::mean( c1.b_, c2.b_)) )
+    return { static_cast<uint8_t>( std::round(imageUtils::meanIfOver255( c1.r_, c2.r_)) ),
+             static_cast<uint8_t>( std::round(imageUtils::meanIfOver255( c1.g_, c2.g_)) ),
+             static_cast<uint8_t>( std::round(imageUtils::meanIfOver255( c1.b_, c2.b_)) )
     };
 }
 static Color operator*( const double alpha, const Color& c ) {
