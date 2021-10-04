@@ -32,10 +32,10 @@ enum class Format : bool {ASCII = false , BINARY = true};
 /// \warning The maximum of : intensity = max of uint8_t
 class GrayImage {
     /// The color black in shade of gray
-    static constexpr Shade black = 0;
+    static constexpr Shade black{0};
 
     /// The default color for grayImage is black
-    static constexpr Shade defaultColor = black;
+    static constexpr const Shade& defaultColor = black;
 
     /// The default intensity
     static constexpr Shade defaultIntensity = std::numeric_limits<Shade>::max();
@@ -426,8 +426,8 @@ public:
     constexpr Color( Color&& ) noexcept = default;
     ~Color() noexcept = default;
 
-    Color& operator=( const Color& ) = default;
-    Color& operator=( Color&& ) noexcept = default;
+    constexpr Color& operator=( const Color& ) = default;
+    constexpr Color& operator=( Color&& ) noexcept = default;
 
     Shade r_{ 0 };
     Shade g_{ 0 };
@@ -461,10 +461,10 @@ class ColorImage {
     static constexpr Shade defaultShade = 0;
 
     /// The color black in shade of gray
-    static constexpr Color black = Color(defaultShade,defaultShade,defaultShade);
+    static constexpr Color black{0,0,0};
 
     /// The default color for grayImage is black
-    static constexpr Color defaultColor = black;
+    static constexpr const Color& defaultColor = black;
 
     /// The default intensity
     static constexpr Shade defaultIntensity = std::numeric_limits<Shade>::max();
