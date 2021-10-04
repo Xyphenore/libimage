@@ -54,6 +54,13 @@ int main( int argc, char* argv[] ) {
         std::ofstream off( "../ressources/chatscale.pgm", ios::binary );
         pimg->writePGM( off );
 
+        std::ifstream iff( "../ressources/images/lena.ppm", ios::binary );
+        auto* img = ColorImage::readPPM(iff);
+
+        auto* imgscalecolor = img->bilinearScale( 2*img->getWidth(), 2*img->getHeight());
+
+        std::ofstream out( "../ressources/chatcolorscale.ppm", ios::binary );
+        imgscalecolor->writePPM( out );
         /*
         GrayImage shade(1,10, 10);
 
