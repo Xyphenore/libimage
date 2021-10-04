@@ -15,6 +15,9 @@ extern "C" {
 #include <jpeglib.h>
 }
 
+// Si on passe a c++17, supprimer ce qui suit
+constexpr Shade GrayImage::black;
+constexpr Color ColorImage::black;
 
 using alwaysData = std::runtime_error;
 using badValuePixel = std::runtime_error;
@@ -27,6 +30,8 @@ using invalidPosition = std::invalid_argument;
 using invalidArray = std::invalid_argument;
 using invalidFormat = std::invalid_argument;
 using invalidLength = std::invalid_argument;
+
+
 
 
 namespace imageUtils {
@@ -550,7 +555,7 @@ ColorImage::ColorImage( const std::intmax_t width, const std::intmax_t height, c
     imageUtils::verifyIntensity( intensity, imageUtils::maxIntensity );
 
     // Fill the image with the default Color
-    fill( defaultColor);
+    fill( defaultColor );
 }
 
 
