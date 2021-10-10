@@ -14,8 +14,8 @@
 #include <vector>
 #include <limits>
 
-const char* const identifier = "david_a";
-const char* const informations = "";
+extern const char* const identifier;
+extern const char* const informations;
 
 using Width = std::uint16_t;
 using Height = std::uint16_t;
@@ -855,10 +855,6 @@ inline void GrayImage::writeJPEG( std::ostream& os ) const {
     // Do nothing
 }
 
-inline GrayImage* GrayImage::readTGA( std::istream& is ) {
-    // Do nothing
-    return createGrayImage(11, 11, 11);
-}
 
 inline GrayImage* GrayImage::readJPEG( std::istream& is ) {
     // Do nothing
