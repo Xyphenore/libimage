@@ -15,6 +15,9 @@ extern "C" {
 #include <jpeglib.h>
 }
 
+const char* const identifier = "david_a";
+const char* const informations = "";
+
 // Si on passe a c++17, supprimer ce qui suit
 constexpr Shade GrayImage::black;
 constexpr Color ColorImage::black;
@@ -32,6 +35,8 @@ using invalidFormat = std::invalid_argument;
 using invalidLength = std::invalid_argument;
 
 
+// activer les exceptions pour les flux
+// on doit vérifier dans quel type de boutisme on lit/ecrit dans les fonctions respective
 
 
 namespace imageUtils {
@@ -39,6 +44,18 @@ namespace imageUtils {
     constexpr static auto maxHeight = std::numeric_limits<Height>::max();
     constexpr static auto maxIntensity = std::numeric_limits<Shade>::max();
 
+    /// Activate the exception's throw for failbit at true, on an istream
+    static void activateExceptionsForFailBitOn( std::istream& is) {
+        is.exceptions(std::ios_base::failbit);
+    }
+
+    /// Activate the exception's throw for badbit at true, on an istream
+    static void activateExceptionsForBadBitOn( std::istream& is ) {
+        is.exceptions(std::ios_base::badbit);
+    }
+
+    // Penser que cela doit s'adapter au type resprésentant les channel de couleurs de la classe COLOR
+    // Vérifier s'il n'y a pas d'overflox sur l'opération v1 + v2
     constexpr static double meanIfOver255( const double v1, const double v2 ) {
         return ( (v1 + v2) > 255 ? (v1 + v2)/2 : (v1 + v2) );
     }
@@ -47,6 +64,9 @@ namespace imageUtils {
     /// \param[in,out] input stream
     /// \exception THINK exception to input stream
     static void skip_comments( std::istream &is ) {
+        // Activate throwing exceptions when failbit was set to true
+        //activateExceptionsForFailBitOn( is );
+
         // Detect the start of a comments
         while ( '#' == std::ws(is).peek() ) {
             // Ignore all characters up to \n
@@ -459,6 +479,100 @@ GrayImage *GrayImage::readPGM( std::istream &is ) {
     return new GrayImage( width, height, intensity, std::move(pixels) );
 }
 
+GrayImage* GrayImage::readTGA( std::istream& is ) {
+    constexpr std::size_t lengthOfSignature = 16;
+    constexpr std::intmax_t lengthOfSignatureAndEndFooter = 18;
+    const std::string SIGNATURE("TRUEVISION-XFILE");
+
+    // Move entry to the start of SIGNATURE
+    is.seekg(-lengthOfSignatureAndEndFooter, std::ios_base::end);
+
+    auto const rawSignature = new char[lengthOfSignature];
+    is.read( rawSignature, lengthOfSignature );
+
+    const std::string readSignature(rawSignature);
+
+    // Vérification que l'on a le format Original de Targa
+    if ( readSignature == SIGNATURE ) {
+        // Récuperer la taille des developpeurs et la taille des extensions
+        //throw invalidFormat( "The format TRUEVISION-XFILES is not supported. Only the ORIGINAL format of Targa");
+    }
+
+    // Déplacement au début du fichier
+    is.seekg(0, std::ios_base::beg);
+
+    // 1 Lecture de la taille du champ d'identification
+    uint8_t taille_champ_identification;
+    is.read( reinterpret_cast<char*>(&taille_champ_identification), 1);
+
+    // 2 Contient une palette de couleur
+    uint8_t containPalette;
+    is.read( reinterpret_cast<char*>(&containPalette), 1);
+
+    // 3 Type de l'image
+    uint8_t type;
+    is.read( reinterpret_cast<char*>(&type), 1);
+
+    // Verification que la type est 2 pour le rgb non compressé
+    // 1 pour le color mapped non compressé
+    // 3 grayshade non compressed
+    // 10 rgb rle
+    // 9 color mapped rle
+    if ( type != 2 ) {
+        throw invalidFormat( "Only supported format 2 RGB non compressed");
+    }
+
+    // 4 Spec de palette couleur
+    uint16_t firstcolor = 0;
+    uint16_t countColor = 0;
+    uint8_t nbBitsColor = 0;
+
+    if ( containPalette == 1 ) {
+        is.read( reinterpret_cast<char*>(&firstcolor), 2);
+        is.read( reinterpret_cast<char*>(&countColor), 2);
+        is.read( reinterpret_cast<char*>(&nbBitsColor), 1);
+    }
+
+    // 5 Spec Image
+    uint16_t originX;
+    is.read( reinterpret_cast<char*>(&originX), 2);
+
+    // Verifier l'origine x
+
+    uint16_t originY;
+    is.read( reinterpret_cast<char*>(&originY), 2);
+
+    // Verifier l'origine y
+
+    uint16_t width;
+    is.read( reinterpret_cast<char*>(&width), 2);
+
+    // Vérifier la largeur de l'image
+
+    uint16_t height;
+    is.read( reinterpret_cast<char*>(&height), 2);
+
+    // Vérifier la hauteur de l'image
+
+    uint8_t taille_octet;
+    is.read( reinterpret_cast<char*>(&taille_octet), 1);
+
+    // Verification de la taille des pixels
+    if ( taille_octet != 24 ) {
+        throw invalidFormat( "Cette fonction ne prend en charge que des pixels de 24bits");
+    }
+
+    // Verification du byte 17
+    uint8_t descByteImage;
+    is.read( reinterpret_cast<char*>(&descByteImage), 1);
+
+    // Verification de la composition du byte 17
+    if ( descByteImage ^ 0x0 ) {
+        //
+    }
+
+}
+
 // Scaler
 GrayImage* GrayImage::simpleScale( const std::intmax_t newWidth, const std::intmax_t newHeight ) const {
     if ( 0 == newWidth ) {
@@ -502,7 +616,7 @@ GrayImage* GrayImage::bilinearScale( const std::intmax_t newWidth, const std::in
     // xp and yp was coordinates of pixels in the new image
     for ( uint16_t yp = 0; yp < newHeight; ++yp) {
         // We scale the coordinate yp in the scale of the old image
-        const auto y = ratioH * yp;
+        const auto y = ratioH * ( yp + 0.5 );
 
         // We determine the boundary of the double y, between two nearest integers
         // Such as : y1 <= y <= y2
@@ -515,7 +629,7 @@ GrayImage* GrayImage::bilinearScale( const std::intmax_t newWidth, const std::in
 
         // We do the same process of the coordinate yp, for the coordinate xp
         for ( uint16_t xp = 0; xp < newWidth; ++xp ) {
-            const auto x = ratioW * xp;
+            const auto x = ratioW * (0 == xp ? 0.0 : ( xp - 0.5));
             const auto x1 = static_cast<uint16_t>( std::floor(x) );
             const auto x2 = static_cast<uint16_t>( std::ceil(x) < width_ ? std::ceil(x) : (width_ - 1) );
 
