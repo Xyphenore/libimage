@@ -23,66 +23,41 @@ int main( int argc, char* argv[] ) {
     cout << "Votre identifiant tel que declare dans Image.cpp : " << identifier << endl;
     cout << "Les informations que vous avez decide d'indiquer au correcteur : " << endl << informations << endl;
     try {
+        /*
+        ofstream ottest( "../ressources/test", ios::binary );
+        uint16_t test = 1500;
+        ottest.write( reinterpret_cast<const char*>(&test), 2 );
+        ottest.close();
+
+        uint16_t test1;
+        uint8_t test1lo;
+        uint8_t test1hi;
+        ifstream ittest( "../ressources/test", ios::binary );
+        ittest.read( reinterpret_cast<char*>(&test1), 2);
+        ittest.seekg(0);
+        ittest.read( reinterpret_cast<char*>(&test1lo), 1);
+        ittest.read( reinterpret_cast<char*>(&test1hi), 1);
+
+        cout << test1 << " " << (unsigned)test1lo << " " << (unsigned)test1hi << endl;
+
+        if( test == test1 ) cout << "Good\n";
+        else {
+            cout <<"bad\n";
+            cout << test << " " << test1 << endl;
+        }*/
+
         ifstream ifimage( "../ressources/chat.pgm", ios::binary );
 
-        const GrayImage* const gray = GrayImage::readPGM( ifimage );
+        const auto greay = GrayImage::readPGM_secured( ifimage );
 
-        //ofstream ofimgbis( "../ressources/chatbis.pgm", ios::binary );
-        //gray->writePGM( ofimgbis );
+        auto pimg = greay->simpleScale( imageUtils::Dimension<>{823, 400} );
+        auto pbilinear = greay->bilinearScale( imageUtils::Dimension<>{823, 400} );
 
-        //GrayImage imgcopy( *gray );
+        ofstream ot1( "..//ressources/ot1.pgm", ios::binary);
+        ofstream ot2( "../ressources/ot2.pgm", ios::binary);
 
-        //imgcopy.clear( 150 );
-
-        //GrayImage imgrect( *gray );
-
-        auto pimg = gray->simpleScale( 823, 400 );
-        auto pbilinear = gray->bilinearScale( 823, 400 );
-
-        //imgrect.rectangle( 150, 120, 10, 20, 0 );
-        //imgcopy.fillRectangle( 150, 120, 150, 50, 255 );
-
-        //ofstream ofimgrect( "../ressources/chatrect.pgm", ios::binary );
-        //imgrect.writePGM( ofimgrect );
-
-        //ofstream ofimgclear( "../ressources/chatclear.pgm", ios::binary );
-        //imgcopy.writePGM( ofimgclear );
-
-        std::ofstream of( "../ressources/chatbilinear.pgm", ios::binary );
-        pbilinear->writePGM( of );
-
-        std::ofstream off( "../ressources/chatscale.pgm", ios::binary );
-        pimg->writePGM( off );
-
-        std::ifstream iff( "../ressources/images/lena.ppm", ios::binary );
-        auto* img = ColorImage::readPPM(iff);
-
-        auto* imgscalecolor = img->bilinearScale( 2*img->getWidth(), 2*img->getHeight());
-
-        std::ofstream out( "../ressources/chatcolorscale.ppm", ios::binary );
-        imgscalecolor->writePPM( out );
-        /*
-        GrayImage shade(1,10, 10);
-
-
-        for ( uint16_t i = 0; i < 10; ++i ) {
-            shade.pixel(0,i) = i;
-        }
-
-
-
-        const GrayImage * const p = shade.simpleScale( shade.getWidth(), 2 * shade.getHeight());
-        const GrayImage * const pbilinear2 = shade.bilinearScale( shade.getWidth(), 2 * shade.getHeight());
-
-        ofstream ofscale( "../ressources/255shades.pgm", ios::binary );
-        shade.writePGM(ofscale);
-
-        ofstream ofbilinear( "../ressources/10shadesbilinear.pgm", ios::binary);
-        pbilinear2->writePGM( ofbilinear);
-
-        ofstream of2scale("../ressources/510shades.pgm", ios::binary);
-        p->writePGM(of2scale);
-*/
+        pimg->writePGM( ot1, Format::WRITE_IN::BINARY );
+        pbilinear->writePGM( ot2, Format::WRITE_IN::BINARY );
 
     } // Trois types d'exceptions seront attrapés (les chaines C et C++ ainsi que
         // les std::exception et toutes ses dérivées). N'utilisez pas autre chose !
