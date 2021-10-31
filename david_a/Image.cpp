@@ -11,6 +11,7 @@
 #include <cmath>
 #include <sstream>
 #include <bitset>
+#include <type_traits>
 
 extern "C" {
 #include <jpeglib.h>
@@ -20,9 +21,7 @@ const char* const identifier = "david_a";
 const char* const informations = "Beaucoup de méthodes dépréciées, car j'ai fait des méthodes soit plus sécurisées,"
                                  "soit avec moins de paramètres et une meilleure couche d'abstraction";
 
-// Si on passe a c++17, supprimer ce qui suit
-constexpr Shade GrayImage::black;
-constexpr Color ColorImage::black;
+
 
 
 using alwaysData = std::runtime_error;
@@ -33,12 +32,15 @@ using invalidWidth = std::invalid_argument;
 using invalidHeight = std::invalid_argument;
 using invalidIntensity = std::invalid_argument;
 using invalidPosition = std::invalid_argument;
-using invalidArray = std::invalid_argument;
+using invalidSizeArray = std::invalid_argument;
 using invalidFormat = std::invalid_argument;
 using invalidLength = std::invalid_argument;
 using invalidColorMapType = std::invalid_argument;
 using invalidCoordinateX = std::invalid_argument;
 using invalidCoordinateY = std::invalid_argument;
+
+using invalidShade = std::invalid_argument;
+using invalidColor = std::invalid_argument;
 
 
 
@@ -60,11 +62,21 @@ using invalidCoordinateY = std::invalid_argument;
 }
 */
 namespace imageUtils {
+    // TODO Documenter
     constexpr std::streamsize oneByte = 1;
     constexpr std::streamsize twoBytes = 2;
     constexpr std::streamsize fourBytes = 4;
 
+    // TODO Documenter ou raprocher de l'utilisation
     using invalidEnumTYPE = std::invalid_argument;
+
+    // aka 65535
+    constexpr static auto maxWidth = std::numeric_limits<Width>::max();
+    constexpr static auto maxHeight = std::numeric_limits<Height>::max();
+
+    // aka 255
+    constexpr static auto maxIntensity = std::numeric_limits<Shade>::max();
+
 
     /// Activate the exception's throw for failbit at true, on an istream
     static void activateExceptionsForFailBitOn( std::ios& ios ) {
@@ -81,6 +93,7 @@ namespace imageUtils {
         ios.exceptions( std::ios_base::failbit | std::ios_base::badbit );
     }
 
+    // TODO
     // Penser que cela doit s'adapter au type resprésentant les channel de couleurs de la classe COLOR
     // Vérifier s'il n'y a pas d'overflox sur l'opération v1 + v2
     constexpr static double meanIfOver255( const double v1, const double v2 ) {
@@ -148,72 +161,236 @@ namespace imageUtils {
         }
     }
 
-    template <typename TWidth>
-    static void verifyWidth( const intmax_t width, const TWidth limit ) {
-        try {
-            imageUtils::verifyOver0UnderOrEqualLimitOf<TWidth>( width, limit );
-        } catch ( const std::range_error& ) {
-            throw invalidWidth( "Bad width of Image" );
+
+    /// All functions contained in this namespace just verify a value is correct
+    namespace VERIFY {
+        /// Represents an interval between two limits of an interval
+        /// \param [in] b1, b2 can be typed as intmax_t or as type with definition interval in the imtmax_t interval
+        template <typename T>
+        class Interval {
+            static_assert( std::is_arithmetic<T>::value, "Error the given type T is not an arithmetic type(int or float)");
+        public :
+            /// Created an interval with limit b1, and limit b2
+            Interval( const intmax_t b1, const intmax_t b2 )
+                    : b1_(static_cast<T>(b1)), b2_(static_cast<T>(b2)) {}
+
+            /// Return the minimal limit of the interval
+            T min() const { return std::min( b1_, b2_); }
+
+            /// Return the maximal limit of the interval
+            T max() const { return std::max( b1_, b2_ ); }
+
+        private :
+            T b1_;
+            T b2_;
+        };
+
+
+        /// Enum (YES/NO) to tells if we exclude limits of a given interval
+        using LIMIT_EXCLUDE = BOOLEAN_TYPE;
+
+        /// \returns true if the given value is in the interval (excluded or included)
+        /// \returns false if the given value is not in the interval (excluded or included)
+        /// \pre template LIMIT_EXCLUDE : YES or NO
+        /// \pre if the given value was YES so interval limits was excluded
+        /// \pre if the given value was NO so interval limits was included
+        template <LIMIT_EXCLUDE excluded = LIMIT_EXCLUDE::NO, typename TValue, typename TInterval>
+        static bool inInterval( const TValue value, const Interval<TInterval> interval ) {
+            static_assert( std::is_integral<TValue>::value, "Error the given type TValue is not an integral type");
+            static_assert( std::is_integral<TInterval>::value, "Error the given type TInterval is not an integral type");
+
+            switch ( excluded ) {
+                case LIMIT_EXCLUDE::NO :
+                    return ( value <= interval.max() ) && ( interval.min() <= value );
+
+                case LIMIT_EXCLUDE::YES :
+                    return ( value < interval.max() ) && ( interval.min() < value );
+
+                default :
+                    throw invalidEnumTYPE( "The given enum type in template setting was unknown");
+            }
+        }
+
+
+        /// \returns true if the given value was over 0
+        /// \returns false if the given value was not over 0
+        template <typename T>
+        static bool isOver0( const T value ) {
+            static_assert( std::is_arithmetic<T>::value, "Error the given type T is not an arithmetic type");
+
+            return value > 0;
+        }
+
+        /// \returns true if the given value is less than the given limit
+        /// \returns false if the given value is greater or equal than the given limit
+        template <typename T>
+        static bool isUnderLimit( const T value, const T limit ) {
+            static_assert( std::is_integral<T>::value, "Error the given type T is not an integral type");
+
+            return value < limit;
+        }
+
+
+        /// Do nothing except throw
+        /// \throw invalidWidth if the given width don't respect the given interval
+        template<typename TWidth>
+        static void verifyWidth( const intmax_t width, const Interval<TWidth> interval ) {
+            if ( ( !isOver0(width) ) || ( !inInterval( width, interval ))) {
+                throw invalidWidth( "Bad width of Image" );
+            }
+        }
+
+        /// Do nothing except throw
+        /// \throw invalidHeight if the given height don't respect the given interval
+        template<typename THeight>
+        static void verifyHeight( const intmax_t height, const Interval<THeight> interval ) {
+            if ( ( !isOver0(height) ) || ( !inInterval( height, interval ))) {
+                throw invalidHeight( "Bad height of Image" );
+            }
+        }
+
+        /// Do nothing except throw
+        /// \throw invalidIntensity if the given intensity don't respect the given interval
+        template <typename TIntensity>
+        static void verifyIntensity( const intmax_t intensity, const Interval<TIntensity> interval ) {
+            if ( ( !isOver0(intensity) ) || ( !inInterval( intensity, interval ))) {
+                throw invalidIntensity( "Bad intensity of Image" );
+            }
+        }
+
+        /// Do nothing except throw
+        /// \throw invalidLength if the given length don't respect the given interval
+        template <typename TLength>
+        static void verifyLength( const intmax_t length, const Interval<TLength> interval ) {
+            if ( !inInterval( length, interval) ) {
+                throw invalidLength( "Bad length" );
+            }
+        }
+
+        /// Do nothing except throw
+        /// \throw invalidShade if the given shade don't respect the given interval
+        template <typename TShade>
+        static void verifyShade( const intmax_t shade, const Interval<TShade> interval ) {
+            if ( !inInterval( shade, interval ) ) {
+                throw invalidShade( "Bad shade" );
+            }
+        }
+
+        /// Verify the given color was under or equal to the given color limit
+        /// \throw invalidColor if the given color is not under or equal to the given color limit
+        static void verifyColor( const Color c, const Color limit ) {
+            if ( (!inInterval( c.r_, Interval<Shade>{0,limit.r_})) ||
+                 (!inInterval( c.g_, Interval<Shade>{0,limit.g_})) ||
+                 (!inInterval( c.b_, Interval<Shade>{0,limit.b_})) ) {
+                throw invalidColor("The given color is over the given limit");
+            }
+        }
+
+        /// Verify all pixels contained in the given vector, are under or equals to the given limit
+        /// \throw invalidType if TPixel is not integral or Color
+        /// \throw badValuePixel if a pixel is over the given limit
+        template <typename TPixel, typename TLimit>
+        static void verifyPixels( const std::vector<TPixel>& pixels, const TLimit limit ) {
+            if ( std::is_same<TPixel, Color>::value && (limit < std::numeric_limits<TLimit>::max()) ) {
+                const auto overLimit = [limit]( const Color pixel )
+                { return !inInterval( pixel.r_, Interval<TLimit>{0,limit}) ||
+                         !inInterval( pixel.g_, Interval<TLimit>{0,limit}) ||
+                         !inInterval( pixel.b_, Interval<TLimit>{0,limit});
+                };
+
+                const auto pos = std::find_if( pixels.cbegin(), pixels.cend(), overLimit );
+
+                if ( pos != pixels.cend() ) {
+                    std::ostringstream oss( "Bad pixel at ", std::ios::ate );
+                    oss << static_cast<intmax_t>( pos - pixels.cbegin() ) << " element";
+                    throw badValuePixel( oss.str() );
+                }
+            }
+            else if ( (!std::is_same<TPixel, Color>::value) && std::is_integral<TPixel>::value && (limit < std::numeric_limits<TLimit>::max()) ) {
+                const auto overLimit = [limit]( const TPixel pixel )
+                        { return !inInterval(pixel, Interval<TPixel>{0,limit}); };
+
+                const auto pos = std::find_if( pixels.cbegin(), pixels.cend(), overLimit );
+
+                if ( pos != pixels.cend() ) {
+                    std::ostringstream oss( "Bad pixel at ", std::ios::ate );
+                    oss << static_cast<intmax_t>( pos - pixels.cbegin() ) << " element";
+                    throw badValuePixel( oss.str() );
+                }
+            }
+            else {
+                throw invalidType( "The given template type was not manage by this function");
+            }
+        }
+
+        /// Do nothing except throw
+        /// \throw invalidSizeArray if the given vector don't have the same size of the given maxSize
+        template <typename TPixel>
+        static void verifySizeArray( const std::vector<TPixel>& pixels, const size_t maxSize ) {
+            if ( pixels.size() != maxSize ) {
+                throw invalidSizeArray( "The given array does not match with the size of Image" );
+            }
+        }
+
+        // TODO
+        /// Verify the given Position (x,y) was in Interval[0, given limit[
+        /// \throw invalidCoordinateX if x is not in the interval [0, given xlimit[
+        /// \throw invalidCoordinateY if y is not in the interval [0, given ylimit[
+        template <typename TPosition>
+        static void verifyPosition( const Point p, const Interval<TPosition> xInterval, const Interval<TPosition> yInterval ) {
+            if ( (!inInterval( p.x, xInterval)) || (!isUnderLimit<intmax_t>( p.x, xInterval.max())) ) {
+                throw invalidCoordinateX( "The given x position is invalid" );
+            }
+
+            if ( (!inInterval( p.y, yInterval)) || (!isUnderLimit<intmax_t>( p.y, yInterval.max())) ) {
+                throw invalidCoordinateY( "The given y position is invalid" );
+            }
         }
     }
 
-    template <typename TWidth>
-    static TWidth readWidth( std::istream& is ) {
-        intmax_t length = 0;
-        is >> length;
+    /// All functions contained in this namespace can read value represented by ASCII
+    namespace ASCII {
+        using namespace VERIFY;
 
-        imageUtils::verifyWidth( length, std::numeric_limits<TWidth>::max() );
+        // TODO Complete ios_exception
+        /// \throws invalidWidth if the read value from the given stream, was outside of Interval]0, maxWidth]
+        /// \throws ios_exception if the given stream failed or if the given stream is invalid
+        template <typename TWidth>
+        static TWidth readWidth( std::istream& is ) {
+            intmax_t length = 0;
+            is >> length;
 
-        return static_cast<TWidth>(length);
-    }
+            verifyWidth( length, Interval<TWidth>(0,maxWidth));
 
+            return static_cast<TWidth>(length);
+        }
 
-    template <typename THeight>
-    static void verifyHeight( const intmax_t height, const THeight limit ) {
-        try {
-            imageUtils::verifyOver0UnderOrEqualLimitOf<THeight>( height, limit );
-        } catch ( const std::range_error& ) {
-            throw invalidHeight( "Bad height of Image" );
+        // TODO Complete ios_exception
+        /// \throws invalidHeight if the read value from the given stream, was outside of Interval]0, maxHeight]
+        /// \throws ios_exception if the given stream failed or if the given stream is invalid
+        template <typename THeight>
+        static THeight readHeight( std::istream& is ) {
+            intmax_t height = 0;
+            is >> height;
+
+            verifyHeight( height, Interval<THeight>(0,maxHeight));
+
+            return static_cast<THeight>(height);
+        }
+
+        // TODO Documenter
+        template <typename TIntensity>
+        static TIntensity readIntensity( std::istream& is ) {
+            intmax_t intensity = 0;
+            is >> intensity;
+
+            VERIFY::verifyIntensity( intensity, VERIFY::Interval<Shade>{0,maxIntensity} );
+
+            return static_cast<TIntensity>(intensity);
         }
     }
 
-    template <typename THeight>
-    static THeight readHeight( std::istream& is ) {
-        intmax_t height = 0;
-        is >> height;
 
-        imageUtils::verifyHeight( height, std::numeric_limits<THeight>::max() );
-
-        return static_cast<THeight>(height);
-    }
-
-    template <typename TIntensity>
-    static void verifyIntensity( const intmax_t intensity, const TIntensity limit ) {
-        try {
-            imageUtils::verifyOver0UnderOrEqualLimitOf<TIntensity>( intensity, limit );
-        } catch ( const std::range_error& ) {
-            throw invalidIntensity( "Bad intensity of Image" );
-        }
-    }
-
-    template <typename TIntensity>
-    static TIntensity readIntensity( std::istream& is ) {
-        intmax_t intensity = 0;
-        is >> intensity;
-
-        imageUtils::verifyIntensity( intensity, std::numeric_limits<TIntensity>::max() );
-
-        return static_cast<TIntensity>(intensity);
-    }
-
-    template <typename TLength>
-    static void verifyLength( const intmax_t length, const TLength limit ) {
-        try {
-            imageUtils::verifyOver0UnderOrEqualLimitOf<TLength>( length, limit );
-        } catch ( const std::range_error& ) {
-            throw invalidLength( "Bad length" );
-        }
-    }
 
     template <typename Type>
     static void verifyOverEqual0UnderEqualLimitOf( const intmax_t value, const Type limit ) {
@@ -224,72 +401,40 @@ namespace imageUtils {
             throw std::range_error( oss.str() );
         }
     }
+}
 
-    template <typename TColor>
-    static void verifyColor( const intmax_t color, const TColor limit ) {
-        try {
-            imageUtils::verifyOverEqual0UnderEqualLimitOf<TColor>( color, limit );
-        } catch ( const std::range_error& ) {
-            throw invalidColor( "Bad Color" );
-        }
+using namespace imageUtils;
+
+// Si on passe a c++17, supprimer ce qui suit
+const Shade GrayImage::black = 0;
+const Shade& GrayImage::defaultColor = black;
+const Shade GrayImage::defaultIntensity = imageUtils::maxIntensity;
+
+const Color ColorImage::black = Color();
+const Color& ColorImage::defaultColor = black;
+const Shade ColorImage::defaultIntensity = imageUtils::maxIntensity;
+
+
+
+// Color's method
+Color::Color( const intmax_t r, const intmax_t g, const intmax_t b )
+: r_( static_cast<Shade>(r) ), g_( static_cast<Shade>(g) ), b_( static_cast<Shade>(b)) {
+    constexpr auto limit = imageUtils::maxIntensity;
+
+    if ( ( 0 > r ) || ( limit < r ) ) {
+        throw invalidColor( "Bad Color : red channel was out of range [0;255]" );
     }
 
-    template <typename TColor>
-    static void verifyColorColor( const TColor color, const TColor limit ) {
-        try {
-            const auto black = Color(0,0,0);
-            if ( ( black > color ) || ( limit < color ) ) {
-                std::ostringstream oss( "Value out [0, ", std::ios::ate );
-                oss << std::numeric_limits<intmax_t>::max() << "]";
-
-                throw std::range_error( oss.str() );
-            }
-        }
-        catch ( const std::range_error& ) {
-            throw invalidColor( "Bad Color" );
-        }
+    if ( ( 0 > g ) || ( limit < g ) ) {
+        throw invalidColor( "Bad Color : green channel was out of range [0;255]" );
     }
 
-
-    template <typename TPixel>
-    static void verifyPixels( const std::vector<TPixel>& pixels, const TPixel limit ) {
-        if ( limit < std::numeric_limits<TPixel>::max() ) {
-            const auto overLimit = [limit]( const TPixel pixel ) { return pixel > limit; };
-
-            const auto pos = std::find_if( pixels.cbegin(), pixels.cend(), overLimit );
-
-            if ( pos != pixels.cend() ) {
-                std::ostringstream oss( "Bad pixel at ", std::ios::ate );
-                oss << static_cast<intmax_t>( pos - pixels.cbegin() );
-                throw badValuePixel( oss.str() );
-            }
-        }
-    }
-
-    template <typename TPixel>
-    static void verifySizeArray( const std::vector<TPixel>& pixels, const size_t maxSize ) {
-        if ( pixels.size() != maxSize ) {
-            throw invalidArray( "The given array does not match with the size of Image" );
-        }
-    }
-
-    template <typename TPosition>
-    static void verifyPosition( const intmax_t x, const TPosition limit ) {
-        if ( ( x < 0 ) || ( limit <= x ) ) {
-            throw invalidPosition( "The given position is invalid" );
-        }
-    }
-
-    template <typename TPosition>
-    static void verifyPosition( const Point p, const TPosition xLimit, const TPosition yLimit ) {
-        if ( ( p.x < 0 ) || ( xLimit <= p.x ) ) {
-            throw invalidCoordinateX( "The given x position is invalid" );
-        }
-        if ( ( p.y < 0 ) || ( yLimit <= p.y ) ) {
-            throw invalidCoordinateY( "The given y position is invalid" );
-        }
+    if ( ( 0 > b ) || ( limit < b ) ) {
+        throw invalidColor( "Bad Color : blue channel was out of range [0;255]" );
     }
 }
+
+
 
 // Definitions of Color
 static Color operator+( const Color& c1, const Color& c2 ) {
@@ -304,12 +449,12 @@ static Color operator*( const long double alpha, const Color& c ) {
              static_cast<uint8_t>(std::round(c.b_ * alpha))
     };
 }
-static bool operator<( const Color& c1, const Color& c2 ) {
-    return (c1.r_ + c1.g_ + c1.b_) < (c2.r_ + c2.g_ + c2.b_);
-}
 
-static bool operator>( const Color& c1, const Color& c2 ) {
-    return ( c1.r_ + c1.g_ + c1.b_ ) > ( c2.r_ + c2.g_ + c2.b_ );
+static bool operator==( const Color& c1, const Color& c2 ) {
+    return (c1.r_ == c2.r_) && (c1.g_ == c2.g_) && (c1.b_ == c2.b_);
+}
+static bool operator!=( const Color& c1, const Color& c2 ) {
+    return !operator==(c1,c2);
 }
 
 
@@ -318,22 +463,22 @@ static bool operator>( const Color& c1, const Color& c2 ) {
 // Definition of GrayImage's methods
 
 // Public builders
-GrayImage::GrayImage( const intmax_t width, const intmax_t height ) : GrayImage(
-        imageUtils::Dimension<>{ width, height }, defaultIntensity ) {}
+GrayImage::GrayImage( const intmax_t width, const intmax_t height )
+: GrayImage(imageUtils::Dimension<>{ width, height }, defaultIntensity ) {}
 
-GrayImage::GrayImage( const imageUtils::Dimension<> dim ) : GrayImage( dim, defaultIntensity ) {}
+GrayImage::GrayImage( const imageUtils::Dimension<> dim )
+: GrayImage( dim, defaultIntensity ) {}
 
-GrayImage::GrayImage( const intmax_t width, const intmax_t height, const intmax_t intensity ) : GrayImage(
-        imageUtils::Dimension<>{ width, height }, intensity ) {}
+GrayImage::GrayImage( const intmax_t width, const intmax_t height, const intmax_t intensity )
+: GrayImage(imageUtils::Dimension<>{ width, height }, intensity ) {}
 
-GrayImage::GrayImage( const imageUtils::Dimension<> dim, const intmax_t intensity ) : dimension{
-        static_cast<Width>(dim.width), static_cast<Height>(dim.height) }, intensity_( static_cast<Shade>(intensity) ),
-                                                                                      pixels_( dimension.width *
-                                                                                               dimension.height ) {
+GrayImage::GrayImage( const imageUtils::Dimension<> dim, const intmax_t intensity )
+: dimension{ static_cast<Width>(dim.width), static_cast<Height>(dim.height) },
+intensity_( static_cast<Shade>(intensity) ),pixels_( dimension.width * dimension.height ) {
     // Verify all preconditions
-    imageUtils::verifyWidth( dim.width, imageUtils::maxWidth );
-    imageUtils::verifyHeight( dim.height, imageUtils::maxHeight );
-    imageUtils::verifyIntensity( intensity, imageUtils::maxIntensity );
+    imageUtils::VERIFY::verifyWidth( dim.width, imageUtils::VERIFY::Interval<Width>{0,imageUtils::maxWidth} );
+    imageUtils::VERIFY::verifyHeight( dim.height, imageUtils::VERIFY::Interval<Height>{0,imageUtils::maxHeight} );
+    imageUtils::VERIFY::verifyIntensity( intensity, imageUtils::VERIFY::Interval<Shade>{0,imageUtils::maxIntensity} );
 
     // Fill the image with the default Color
     fill( defaultColor );
@@ -346,13 +491,13 @@ GrayImage::GrayImage( const imageUtils::Dimension<> dim, const intmax_t intensit
           intensity_( static_cast<Shade>(intensity) ), pixels_( std::move( pixels ) ) {
     // Verify all preconditions
     // TODO Factoriser en verifyDimension
-    imageUtils::verifyWidth( dim.width, imageUtils::maxWidth );
-    imageUtils::verifyHeight( dim.height, imageUtils::maxHeight );
+    imageUtils::VERIFY::verifyWidth( dim.width, imageUtils::VERIFY::Interval<Width>{0,imageUtils::maxWidth} );
+    imageUtils::VERIFY::verifyHeight( dim.height, imageUtils::VERIFY::Interval<Height>{0,imageUtils::maxHeight} );
 
-    imageUtils::verifyIntensity( intensity, imageUtils::maxIntensity );
+    imageUtils::VERIFY::verifyIntensity( intensity, imageUtils::VERIFY::Interval<Shade>{0,imageUtils::maxIntensity} );
 
-    imageUtils::verifySizeArray( pixels_, dimension.width * dimension.height );
-    imageUtils::verifyPixels( pixels_, intensity_ );
+    imageUtils::VERIFY::verifySizeArray( pixels_, dimension.width * dimension.height );
+    imageUtils::VERIFY::verifyPixels( pixels_, intensity_ );
 }
 
 std::unique_ptr<GrayImage>
@@ -372,39 +517,41 @@ GrayImage::createGrayImage( const imageUtils::Dimension<> dim, const intmax_t in
 // Getter / Setter
 Shade& GrayImage::pixel( const intmax_t x, const intmax_t y ) {
     const auto& imageDim = dimension;
-    imageUtils::verifyPosition( x, imageDim.width );
-    imageUtils::verifyPosition( y, imageDim.height );
+    VERIFY::verifyPosition( Point{x,y},
+                            VERIFY::Interval<Width>{0,imageDim.width},
+                            VERIFY::Interval<Height>{0,imageDim.height} );
 
     return pixels_.at( static_cast<size_t>( ( imageDim.width * y ) + x ) );
 }
 
 const Shade& GrayImage::pixel( const intmax_t x, const intmax_t y ) const {
     const auto& imageDim = dimension;
-    imageUtils::verifyPosition( x, imageDim.width );
-    imageUtils::verifyPosition( y, imageDim.height );
+    VERIFY::verifyPosition( Point{x,y},
+                            VERIFY::Interval<Width>{0,imageDim.width},
+                            VERIFY::Interval<Height>{0,imageDim.height} );
 
     return pixels_.at( static_cast<size_t>( ( imageDim.width * y ) + x ) );
 }
 
 void GrayImage::setPixel( const imageUtils::Pixel px, const intmax_t color ) {
     const auto& imageDim = dimension;
-    imageUtils::verifyPosition( px, imageDim.width, imageDim.height );
+    imageUtils::VERIFY::verifyPosition( px, VERIFY::Interval<Width>{0,imageDim.width}, VERIFY::Interval<Height>{0,imageDim.height} );
 
-    imageUtils::verifyColor( color, intensity_ );
+    imageUtils::VERIFY::verifyShade( color, imageUtils::VERIFY::Interval<Shade>{0,intensity_} );
 
     pixels_.at( static_cast<size_t>( ( imageDim.width * px.y ) + px.x ) ) = static_cast<Shade>(color);
 }
 
 Shade GrayImage::getPixel( const imageUtils::Pixel px ) const {
     const auto& imageDim = dimension;
-    imageUtils::verifyPosition( px, imageDim.width, imageDim.height );
+    imageUtils::VERIFY::verifyPosition( px, VERIFY::Interval<Width>{0,imageDim.width}, VERIFY::Interval<Height>{0,imageDim.height} );
 
     return pixels_.at( static_cast<size_t>( ( imageDim.width * px.y ) + px.x ) );
 }
 
 // Filler
 void GrayImage::fill( const intmax_t color ) {
-    imageUtils::verifyColor( color, intensity_ );
+    imageUtils::VERIFY::verifyShade( color, imageUtils::VERIFY::Interval<Shade>{0,intensity_} );
 
     const auto colorGrayShade = static_cast<Shade>( color );
 
@@ -415,12 +562,12 @@ void GrayImage::drawLine(
         const imageUtils::Point start, const intmax_t length, const intmax_t color, const imageUtils::TYPE type ) {
     const auto& imageDim = dimension;
 
-    imageUtils::verifyPosition( start, imageDim.width, imageDim.height );
-    imageUtils::verifyColor( color, intensity_ );
+    imageUtils::VERIFY::verifyPosition( start, VERIFY::Interval<Width>{0,imageDim.width}, VERIFY::Interval<Height>{0,imageDim.height} );
+    imageUtils::VERIFY::verifyShade( color, imageUtils::VERIFY::Interval<Shade>{0,intensity_} );
 
     switch ( type ) {
         case imageUtils::TYPE::VERTICAL :
-            imageUtils::verifyLength( start.y + length, imageDim.height );
+            imageUtils::VERIFY::verifyLength( start.y + length, imageUtils::VERIFY::Interval<Height>{0,imageDim.height});
             for ( intmax_t j = start.y; j < ( start.y + length ); ++j ) {
                 pixels_.at( static_cast<size_t>(( imageDim.width * j ) + start.x) ) = static_cast<Shade>(color);
             }
@@ -428,7 +575,7 @@ void GrayImage::drawLine(
             break;
 
         case imageUtils::TYPE::HORIZONTAL :
-            imageUtils::verifyLength( start.x + length, imageDim.width );
+            imageUtils::VERIFY::verifyLength( start.x + length, imageUtils::VERIFY::Interval<Width>{0,imageDim.width});
             for ( intmax_t i = start.x; i < ( start.x + length ); ++i ) {
                 pixels_.at( static_cast<size_t>(( imageDim.width * start.y ) + i) ) = static_cast<Shade>(color);
             }
@@ -444,12 +591,12 @@ void GrayImage::drawRectangle(
         const imageUtils::Point start, const imageUtils::Dimension<> rectangleDim, const intmax_t color,
         const imageUtils::FILL filled ) {
     const auto& imageDim = dimension;
-    imageUtils::verifyPosition( start, imageDim.width, imageDim.height );
+    imageUtils::VERIFY::verifyPosition( start, VERIFY::Interval<Width>{0,imageDim.width}, VERIFY::Interval<Height>{0,imageDim.height} );
 
-    imageUtils::verifyWidth( start.x + rectangleDim.width, imageDim.width );
-    imageUtils::verifyHeight( start.y + rectangleDim.height, imageDim.height );
+    imageUtils::VERIFY::verifyLength( start.x + rectangleDim.width, imageUtils::VERIFY::Interval<Width>{0,imageDim.width});
+    imageUtils::VERIFY::verifyLength( start.y + rectangleDim.height, imageUtils::VERIFY::Interval<Height>{0,imageDim.height});
 
-    imageUtils::verifyColor( color, intensity_ );
+    imageUtils::VERIFY::verifyShade( color, imageUtils::VERIFY::Interval<Shade>{0,intensity_} );
 
     switch ( filled ) {
         case imageUtils::FILL::NO :
@@ -483,7 +630,7 @@ void GrayImage::writePGM( std::ostream& os, const Format::WRITE_IN f ) const {
         throw invalidFormat( "Unknown image format" );
     }
 
-    imageUtils::verifyPixels<Shade>( pixels_, intensity_ );
+    imageUtils::ASCII::verifyPixels<Shade>( pixels_, intensity_ );
 
     if ( f == Format::BINARY ) {
         // TODO Changer identifier par la variable environnement nom utilisateur
@@ -524,13 +671,13 @@ std::unique_ptr<GrayImage> GrayImage::readPGM_secured( std::istream& is ) {
     }
 
     imageUtils::skip_comments( is );
-    const auto width = imageUtils::readWidth<Width>( is );
+    const auto width = imageUtils::ASCII::readWidth<Width>( is );
 
     imageUtils::skip_comments( is );
-    const auto height = imageUtils::readHeight<Height>( is );
+    const auto height = imageUtils::ASCII::readHeight<Height>( is );
 
     imageUtils::skip_comments( is );
-    const auto intensity = imageUtils::readIntensity<Shade>( is );
+    const auto intensity = imageUtils::ASCII::readIntensity<Shade>( is );
 
     imageUtils::skip_ONEwhitespace( is );
 
@@ -554,7 +701,7 @@ std::unique_ptr<GrayImage> GrayImage::readPGM_secured( std::istream& is ) {
         }
     }
 
-    imageUtils::verifyPixels( pixels, intensity );
+    imageUtils::ASCII::verifyPixels( pixels, intensity );
     imageUtils::skip_ONEwhitespace( is );
 
     imageUtils::verifyStreamContainData( is );
@@ -564,11 +711,9 @@ std::unique_ptr<GrayImage> GrayImage::readPGM_secured( std::istream& is ) {
 
 
 // Scaler
-
-
 std::unique_ptr<GrayImage> GrayImage::simpleScale( const imageUtils::Dimension<> newDim ) const {
-    imageUtils::verifyWidth( newDim.width, imageUtils::maxWidth );
-    imageUtils::verifyHeight( newDim.height, imageUtils::maxHeight );
+    imageUtils::VERIFY::verifyWidth( newDim.width, imageUtils::VERIFY::Interval<Width>{0,imageUtils::maxWidth} );
+    imageUtils::VERIFY::verifyHeight( newDim.height, imageUtils::VERIFY::Interval<Height>{0,imageUtils::maxHeight});
 
     std::vector<Shade> pixels( static_cast<size_t>(newDim.width * newDim.height) );
 
@@ -591,11 +736,11 @@ std::unique_ptr<GrayImage> GrayImage::bilinearScale( const imageUtils::Dimension
     // Peut simplifier la valeur de y2 et x2 car la division en bas vaut toujours 1
     // Car y2 = std::ceil(y) ou bien y2 = y1 + 1 = std::floor(y) + 1
     // Donc ratioY = (y -y1) / (y2 - y1) = y - y1
-    imageUtils::verifyWidth( newDim.width, std::numeric_limits<Width>::max() );
-    imageUtils::verifyHeight( newDim.height, std::numeric_limits<Height>::max() );
+    imageUtils::VERIFY::verifyWidth( newDim.width, imageUtils::VERIFY::Interval<Width>{0,imageUtils::maxWidth} );
+    imageUtils::VERIFY::verifyHeight( newDim.height, imageUtils::VERIFY::Interval<Height>{0,imageUtils::maxHeight} );
 
 
-    std::vector<uint8_t> pixels( static_cast<size_t>(newDim.width * newDim.height) );
+    std::vector<Shade> pixels( static_cast<size_t>(newDim.width * newDim.height) );
 
     const auto& thisDim = dimension;
     // The ratioW and ratioH was scale ratio between the new image and the old image
@@ -603,26 +748,24 @@ std::unique_ptr<GrayImage> GrayImage::bilinearScale( const imageUtils::Dimension
     const auto ratioH = static_cast<long double>(thisDim.height) / newDim.height;
 
     // xp and yp was coordinates of pixels in the new image
-    for ( uint16_t yp = 0; yp < newDim.height; ++yp ) {
+    for ( Height yp = 0; yp < newDim.height; ++yp ) {
         // We scale the coordinate yp in the scale of the old image
-        const auto y = ( ( ( ratioH * yp ) - 0.5 ) < 0 ? 0 : ( ( ratioH * yp ) - 0.5 ) );
+        const auto y = ( ( (ratioH * yp) - 0.5 ) < 0 ? 0 : ( (ratioH * yp) - 0.5 ) );
 
         // We determine the boundary of the double y, between two nearest integers
         // Such as : y1 <= y <= y2
-        const auto y1 = static_cast<uint16_t>( std::floor( y ) );
-        const auto y2 = static_cast<uint16_t>( std::ceil( y ) < thisDim.height ? std::ceil( y ) : ( thisDim.height -
-                                                                                                    1 ) );
+        const auto y1 = static_cast<Height>( std::floor(y) );
+        const auto y2 = static_cast<Height>( std::ceil(y) < thisDim.height ? std::ceil(y) : ( thisDim.height - 1 ) );
 
         // We determine the ratio of y between y1 and y2
         // In the case where y1 == y2, we have a mathematical error for the division, so the result was 0.0
         const auto ratioY = ( ( y2 != y1 ) ? ( ( y - y1 ) / ( y2 - y1 ) ) : 0.0 );
 
         // We do the same process of the coordinate yp, for the coordinate xp
-        for ( uint16_t xp = 0; xp < newDim.width; ++xp ) {
-            const auto x = ( ( ratioH * xp ) + 0.5 );
-            const auto x1 = static_cast<uint16_t>( std::floor( x ) );
-            const auto x2 = static_cast<uint16_t>( std::ceil( x ) < thisDim.width ? std::ceil( x ) : ( thisDim.width -
-                                                                                                       1 ) );
+        for ( Width xp = 0; xp < newDim.width; ++xp ) {
+            const auto x = ( ( ( ratioW * xp ) - 0.5 ) < 0 ? 0 : ( ( ratioW * xp ) - 0.5 ) );
+            const auto x1 = static_cast<Width>( std::floor(x) );
+            const auto x2 = static_cast<Width>( std::ceil(x) < thisDim.width ? std::ceil(x) : ( thisDim.width - 1 ) );
 
             const auto ratioX = ( ( x2 != x1 ) ? ( ( x - x1 ) / ( x2 - x1 ) ) : 0.0 );
 
@@ -633,15 +776,14 @@ std::unique_ptr<GrayImage> GrayImage::bilinearScale( const imageUtils::Dimension
             const auto p4 = getPixel( imageUtils::Pixel{ x2, y2 } );
 
             // We apply the bilinear scale's method to the new image's pixel
-            pixels.at( static_cast<size_t>(xp + ( yp * newDim.width )) ) = static_cast<uint8_t>(std::round(
-                    ( ( 1 - ratioY ) * ( ( ( 1 - ratioX ) * p1 ) + ( ratioX * p3 ) ) ) +
-                    ( ratioY * ( ( ( 1 - ratioX ) * p2 ) + ( ratioX * p4 ) ) ) ));
+            pixels.at( static_cast<size_t>(xp + ( yp * newDim.width )) ) = static_cast<Shade>(std::round(
+                    ( ( 1 - ratioX ) * ( ( ( 1 - ratioY ) * p1 ) + ( ratioY * p2 ) ) ) +
+                    ( ratioX * ( ( ( 1 - ratioY ) * p3 ) + ( ratioY * p4 ) ) ) ));
         }
     }
 
     return createGrayImage( newDim, intensity_, std::move( pixels ) );
 }
-
 
 
 // Definition of ColorImage's methods
@@ -653,9 +795,9 @@ ColorImage::ColorImage( const intmax_t width, const intmax_t height, const intma
         static_cast<Width>(width) ), height_( static_cast<Height>(height) ), intensity_(
         static_cast<Shade>(intensity) ), pixels_( width_ * height_ ) {
     // Verify all preconditions
-    imageUtils::verifyWidth( width, imageUtils::maxWidth );
-    imageUtils::verifyHeight( height, imageUtils::maxHeight );
-    imageUtils::verifyIntensity( intensity, imageUtils::maxIntensity );
+    imageUtils::VERIFY::verifyWidth( width, imageUtils::VERIFY::Interval<Width>{0,imageUtils::maxWidth} );
+    imageUtils::VERIFY::verifyHeight( height, imageUtils::VERIFY::Interval<Height>{0,imageUtils::maxHeight} );
+    imageUtils::VERIFY::verifyIntensity( intensity, imageUtils::VERIFY::Interval<Shade>{0,imageUtils::maxIntensity} );
 
     // Fill the image with the default Color
     fill( defaultColor );
@@ -668,40 +810,41 @@ ColorImage::ColorImage(
         static_cast<Width>(width) ), height_( static_cast<Height>(height) ), intensity_(
         static_cast<Shade>(intensity) ), pixels_( std::move( pixels ) ) {
     // Verify all preconditions
-    imageUtils::verifyWidth( width, imageUtils::maxWidth );
-    imageUtils::verifyHeight( height, imageUtils::maxHeight );
-    imageUtils::verifySizeArray( pixels_, width_ * height_ );
-    imageUtils::verifyIntensity( intensity, imageUtils::maxIntensity );
-    imageUtils::verifyPixels( pixels_, Color( intensity_, intensity_, intensity_ ) );
+    imageUtils::VERIFY::verifyWidth( width, imageUtils::VERIFY::Interval<Width>{0,imageUtils::maxWidth} );
+    imageUtils::VERIFY::verifyHeight( height, imageUtils::VERIFY::Interval<Height>{0,imageUtils::maxHeight} );
+    imageUtils::ASCII::verifySizeArray( pixels_, width_ * height_ );
+    imageUtils::VERIFY::verifyIntensity( intensity, imageUtils::VERIFY::Interval<Shade>{0,imageUtils::maxIntensity});
+    imageUtils::ASCII::verifyPixels<Color,Shade>( pixels_, intensity_ );
 }
 
 // Getter / Setter
 Color& ColorImage::pixel( const intmax_t x, const intmax_t y ) {
-    imageUtils::verifyPosition( x, width_ );
-    imageUtils::verifyPosition( y, height_ );
+    VERIFY::verifyPosition( Point{x,y},
+                            VERIFY::Interval<Width>{0,width_},
+                            VERIFY::Interval<Height>{0,height_} );
 
     return pixels_.at( static_cast<size_t>( ( width_ * y ) + x ) );
 }
 
 const Color& ColorImage::pixel( const intmax_t x, const intmax_t y ) const {
-    imageUtils::verifyPosition( x, width_ );
-    imageUtils::verifyPosition( y, height_ );
+    VERIFY::verifyPosition( Point{x,y},
+                            VERIFY::Interval<Width>{0,width_},
+                            VERIFY::Interval<Height>{0,height_} );
 
     return pixels_.at( static_cast<size_t>( ( width_ * y ) + x ) );
 }
 
 // Filler
 void ColorImage::fill( const Color color ) {
-    imageUtils::verifyColorColor( color, Color(intensity_, intensity_, intensity_) );
-
     std::fill( pixels_.begin(), pixels_.end(), color );
 }
 
 void ColorImage::horizontalLine( const intmax_t x, const intmax_t y, const intmax_t length, const Color color ) {
-    imageUtils::verifyPosition( x, width_ );
-    imageUtils::verifyPosition( y, height_ );
-    imageUtils::verifyLength( length, width_ - x );
-    imageUtils::verifyColorColor( color, Color( intensity_, intensity_, intensity_ ) );
+    VERIFY::verifyPosition( Point{x,y},
+                            VERIFY::Interval<Width>{0,width_},
+                            VERIFY::Interval<Height>{0,height_} );
+    imageUtils::VERIFY::verifyLength( length, imageUtils::VERIFY::Interval<Width>{0,width_ - x} );
+    imageUtils::VERIFY::verifyColor( color, Color( intensity_, intensity_, intensity_ ) );
 
     for ( intmax_t i = x; i < ( x + length ); ++i ) {
         pixel( i, y ) = color;
@@ -709,10 +852,11 @@ void ColorImage::horizontalLine( const intmax_t x, const intmax_t y, const intma
 }
 
 void ColorImage::verticalLine( const intmax_t x, const intmax_t y, const intmax_t length, const Color color ) {
-    imageUtils::verifyPosition( x, width_ );
-    imageUtils::verifyPosition( y, height_ );
-    imageUtils::verifyLength( length, height_ - y );
-    imageUtils::verifyColorColor( color, Color( intensity_, intensity_, intensity_ ) );
+    VERIFY::verifyPosition( Point{x,y},
+                            VERIFY::Interval<Width>{0,width_},
+                            VERIFY::Interval<Height>{0,height_} );
+    imageUtils::VERIFY::verifyLength( length, imageUtils::VERIFY::Interval<Height>{0,height_ - y} );
+    imageUtils::VERIFY::verifyColor( color, Color( intensity_, intensity_, intensity_ ) );
 
     for ( intmax_t j = y; j < ( y + length ); ++j ) {
         pixel( x, j ) = color;
@@ -721,11 +865,12 @@ void ColorImage::verticalLine( const intmax_t x, const intmax_t y, const intmax_
 
 void ColorImage::rectangle(
         const intmax_t x, const intmax_t y, const intmax_t width, const intmax_t height, const Color color ) {
-    imageUtils::verifyPosition( x, width_ );
-    imageUtils::verifyPosition( y, height_ );
-    imageUtils::verifyWidth( width, width_ - x );
-    imageUtils::verifyHeight( height, height_ - y );
-    imageUtils::verifyColorColor( color, Color( intensity_, intensity_, intensity_ ) );
+    VERIFY::verifyPosition( Point{x,y},
+                            VERIFY::Interval<Width>{0,width_},
+                            VERIFY::Interval<Height>{0,height_} );
+    imageUtils::VERIFY::verifyWidth( width, imageUtils::VERIFY::Interval<Width>{0,width_ - x} );
+    imageUtils::VERIFY::verifyHeight( height, imageUtils::VERIFY::Interval<Height>{0,height_ - y} );
+    imageUtils::VERIFY::verifyColor( color, Color( intensity_, intensity_, intensity_ ) );
 
     horizontalLine( x, y, width, color );
     horizontalLine( x, ( y - 1 ) + height, width, color );
@@ -736,11 +881,12 @@ void ColorImage::rectangle(
 
 void ColorImage::fillRectangle(
         const intmax_t x, const intmax_t y, const intmax_t width, const intmax_t height, const Color color ) {
-    imageUtils::verifyPosition( x, width_ );
-    imageUtils::verifyPosition( y, height_ );
-    imageUtils::verifyWidth( width, width_ - x );
-    imageUtils::verifyHeight( height, height_ - y );
-    imageUtils::verifyColorColor( color, Color( intensity_, intensity_, intensity_ ) );
+    VERIFY::verifyPosition( Point{x,y},
+                            VERIFY::Interval<Width>{0,width_},
+                            VERIFY::Interval<Height>{0,height_} );
+    imageUtils::VERIFY::verifyWidth( width, imageUtils::VERIFY::Interval<Width>{0,width_ - x} );
+    imageUtils::VERIFY::verifyHeight( height, imageUtils::VERIFY::Interval<Height>{0,height_ - y} );
+    imageUtils::VERIFY::verifyColor( color, Color( intensity_, intensity_, intensity_ ) );
 
     for ( intmax_t i = y; i < ( y + height ); ++i ) {
         horizontalLine( x, i, width, color );
@@ -755,7 +901,7 @@ void ColorImage::writePPM( std::ostream& os, const Format::WRITE_IN f ) const {
         throw invalidFormat( "Unknown image format" );
     }
 
-    imageUtils::verifyPixels<Color>( pixels_, Color{ intensity_, intensity_, intensity_ } );
+    imageUtils::ASCII::verifyPixels<Color>( pixels_, intensity_ );
 
     if ( f == Format::BINARY ) {
         os << "P6\n" << "# Image sauvegardée par " << ::identifier << '\n' << width_ << " " << height_ << '\n'
@@ -856,13 +1002,13 @@ ColorImage* ColorImage::readPPM( std::istream& is ) {
     }
 
     imageUtils::skip_comments( is );
-    const auto width = imageUtils::readWidth<Width>( is );
+    const auto width = imageUtils::ASCII::readWidth<Width>( is );
 
     imageUtils::skip_comments( is );
-    const auto height = imageUtils::readHeight<Height>( is );
+    const auto height = imageUtils::ASCII::readHeight<Height>( is );
 
     imageUtils::skip_comments( is );
-    const auto intensity = imageUtils::readIntensity<Shade>( is );
+    const auto intensity = imageUtils::ASCII::readIntensity<Shade>( is );
 
     imageUtils::skip_ONEwhitespace( is );
 
@@ -885,7 +1031,7 @@ ColorImage* ColorImage::readPPM( std::istream& is ) {
         }
     }
 
-    imageUtils::verifyPixels( pixels, Color{ intensity, intensity, intensity } );
+    imageUtils::ASCII::verifyPixels( pixels, intensity );
     imageUtils::skip_ONEwhitespace( is );
 
     imageUtils::verifyStreamContainData( is );
@@ -1044,8 +1190,8 @@ ColorImage* ColorImage::readTGA( std::istream& is ) {
 
 // Scaler
 ColorImage* ColorImage::simpleScale( const intmax_t newWidth, const intmax_t newHeight ) const {
-    imageUtils::verifyWidth( newWidth, imageUtils::maxWidth );
-    imageUtils::verifyHeight( newHeight, imageUtils::maxHeight );
+    imageUtils::VERIFY::verifyWidth( newWidth, imageUtils::VERIFY::Interval<Width>{0,imageUtils::maxWidth} );
+    imageUtils::VERIFY::verifyHeight( newHeight, imageUtils::VERIFY::Interval<Height>{0,imageUtils::maxHeight} );
 
     auto image = ColorImage::createColorImage( newWidth, newHeight, intensity_ );
 
@@ -1066,9 +1212,9 @@ ColorImage* ColorImage::bilinearScale( const intmax_t newWidth, const intmax_t n
     // Peut simplifier la valeur de y2 et x2 car la division en bas vaut toujours 1
     // Car y2 = std::ceil(y) ou bien y2 = y1 + 1 = std::floor(y) + 1
     // Donc ratioY = (y -y1) / (y2 - y1) = y - y1
-    imageUtils::verifyWidth( newWidth, std::numeric_limits<Width>::max() );
+    imageUtils::VERIFY::verifyWidth( newWidth, imageUtils::VERIFY::Interval<Width>{0,imageUtils::maxWidth} );
 
-    imageUtils::verifyHeight( newHeight, std::numeric_limits<Height>::max() );
+    imageUtils::VERIFY::verifyHeight( newHeight, imageUtils::VERIFY::Interval<Height>{0,imageUtils::maxHeight} );
 
     std::vector<Color> pixels( static_cast<size_t>(newWidth * newHeight) );
 

@@ -22,16 +22,8 @@ using Width = uint16_t;
 using Height = uint16_t;
 using Shade = uint8_t;
 
-using invalidColor = std::invalid_argument;
 
 namespace imageUtils {
-    // aka 65535
-    constexpr static auto maxWidth = std::numeric_limits<Width>::max();
-    constexpr static auto maxHeight = std::numeric_limits<Height>::max();
-
-    // aka 255
-    constexpr static auto maxIntensity = std::numeric_limits<Shade>::max();
-
     enum class BOOLEAN_TYPE {
         YES, NO
     };
@@ -39,14 +31,10 @@ namespace imageUtils {
     /// Enumeration that indicates whether a shape should be drawn filled or empty
     using FILL = BOOLEAN_TYPE;
 
-    /// Enumeration that indicates if you will secure the read of the image using a unique_ptr
-    using SECURE = BOOLEAN_TYPE;
-
     /// Enumeration that indicates if a line should be drawn horizontally or vertically
     enum class TYPE {
         HORIZONTAL, VERTICAL
     };
-
 
     /// Represents a point with two coordinates
     struct Point {
@@ -58,10 +46,10 @@ namespace imageUtils {
     using Pixel = Point;
 
     /// Represents a dimension of an image, where the width and the height can be of two different types
-    template <typename Width = intmax_t, typename Height = intmax_t>
+    template <typename TWidth = intmax_t, typename THeight = intmax_t>
     struct Dimension {
-        Width width;
-        Height height;
+        TWidth width;
+        THeight height;
     };
 }
 
@@ -100,6 +88,7 @@ namespace Format {
 }
 
 
+// TODO Mettre à jour les exceptions
 /// Can create or build a gray Image in 2D format, where the intensity or depth is coded on one byte
 /// \warning The maximum of : width = max of uint16_t and height = max of uint16_t
 /// \warning The maximum of : intensity = max of uint8_t
@@ -119,8 +108,8 @@ public:
     /// \exception invalidWidth if the given width is outside ]0; maxWidth]
     /// \exception invalidHeight if the given height is outside ]0;maxHeight]
     /// \exception std::bad_alloc if the memory allocation fails
-    [[deprecated ("Please use a constructor with the structure Dimension")]] GrayImage(
-            intmax_t width, intmax_t height );
+    [[deprecated ("Please use a constructor with the structure Dimension")]]
+    GrayImage( intmax_t width, intmax_t height );
 
     /// Build a grayImage with the given Dimension(width, height) and the default intensity
     /// The built image was colored with the default Color
@@ -146,8 +135,8 @@ public:
     /// \exception invalidHeight if the given height is outside ]0;maxHeight]
     /// \exception invalidIntensity if the given intensity is outside [0;maxShades]
     /// \exception std::bad_alloc if the memory allocation fails
-    [[deprecated ("Please use a constructor with the structure Dimension")]] GrayImage(
-            intmax_t width, intmax_t height, intmax_t intensity );
+    [[deprecated ("Please use a constructor with the structure Dimension")]]
+    GrayImage( intmax_t width, intmax_t height, intmax_t intensity );
 
     /// Build a grayImage with the given Dimension(width, height) and intensity
     /// The built image was colored with the default Color
@@ -400,8 +389,8 @@ public:
     /// \exception invalidCoordinateY if y does not in [0; image's height[
     /// \exception invalidColor if color does not in [0; image's intensity]
     /// \exception imageUtils::invalidEnumTYPE if the given TYPE was different from [TYPE::FILLED/TYPE::EMPTY]
-    void drawRectangle(
-            imageUtils::Point start, imageUtils::Dimension<> rectangleDim, intmax_t color, imageUtils::FILL filled );
+    void drawRectangle( imageUtils::Point start, imageUtils::Dimension<> rectangleDim,
+                        intmax_t color, imageUtils::FILL filled );
 
 
     /// Draw a 1 pixel of thickness line, in default Color, with the given length, and it left point at the given position x,y
@@ -473,6 +462,7 @@ public:
     /// \exception invalidHeight if newHeight does not in ]0; maxHeight]
     /// \exception std::bad_alloc if the new image is too large to store
     std::unique_ptr<GrayImage> bilinearScale( imageUtils::Dimension<> newDim ) const;
+
 
     // TODO MAJ DESC
     /// Write in the given output stream the called image in the P5 format
@@ -554,13 +544,13 @@ private:
 
 
     /// The color black in shade of gray
-    static constexpr Shade black{ 0 };
+    static const Shade black;
 
     /// The default color for grayImage is black
-    static constexpr const Shade& defaultColor = black;
+    static const Shade& defaultColor;
 
     /// The default intensity
-    static constexpr Shade defaultIntensity = imageUtils::maxIntensity;
+    static const Shade defaultIntensity;
 
     /// Build a gray Image with the given width and height, intensity and the vector of shades
     /// \warning This builder move the given vector
@@ -576,7 +566,7 @@ private:
     /// \exception invalidWidth if the given width is outside ]0; maxWidth]
     /// \exception invalidHeight if the given height is outside ]0;maxHeight]
     /// \exception invalidIntensity if the given intensity is outside [0;maxShades]
-    /// \exception invalidArray if the given vector don't have the good size like vector_size == width * height
+    /// \exception invalidSizeArray if the given vector don't have the good size like vector_size == width * height
     /// \exception badValuePixel if a pixel in the given vector, have a value above the intensity
     /// \exception std::bad_alloc if the memory allocation fails
     explicit GrayImage( imageUtils::Dimension<> dim, intmax_t intensity, std::vector<Shade>&& pixels );
@@ -595,7 +585,7 @@ private:
     /// \exception invalidWidth if the given width is outside ]0; maxWidth]
     /// \exception invalidHeight if the given height is outside ]0;maxHeight]
     /// \exception invalidIntensity if the given intensity is outside [0;maxShades]
-    /// \exception invalidArray if the given vector don't have the good size like vector_size == width * height
+    /// \exception invalidSizeArray if the given vector don't have the good size like vector_size == width * height
     /// \exception badValuePixel if a pixel in the given vector, have a value above the intensity
     /// \exception std::bad_alloc if the memory allocation fails
     static std::unique_ptr<GrayImage>
@@ -605,44 +595,24 @@ private:
 
 class Color {
 public:
-    constexpr Color() = default;
+    Color() = default;
 
-    constexpr Color( intmax_t r, intmax_t g, intmax_t b );
+    Color( intmax_t r, intmax_t g, intmax_t b );
 
-    constexpr Color( const Color& ) = default;
+    Color( const Color& ) = default;
 
-    constexpr Color( Color&& ) noexcept = default;
+    Color( Color&& ) noexcept = default;
 
     ~Color() noexcept = default;
 
-    constexpr Color& operator=( const Color& ) = default;
+    Color& operator=( const Color& ) = default;
 
-    constexpr Color& operator=( Color&& ) noexcept = default;
+    Color& operator=( Color&& ) noexcept = default;
 
     Shade r_{ 0 };
     Shade g_{ 0 };
     Shade b_{ 0 };
 };
-
-// Color's method
-constexpr Color::Color( const intmax_t r, const intmax_t g, const intmax_t b ) : r_( static_cast<Shade>(r) ),
-                                                                                 g_( static_cast<Shade>(g) ),
-                                                                                 b_( static_cast<Shade>(b) ) {
-    constexpr auto limit = imageUtils::maxIntensity;
-
-    if ( ( 0 > r ) || ( limit < r ) ) {
-        throw invalidColor( "Bad Color : red channel was out of range [0;255]" );
-    }
-
-    if ( ( 0 > g ) || ( limit < g ) ) {
-        throw invalidColor( "Bad Color : green channel was out of range [0;255]" );
-    }
-
-    if ( ( 0 > b ) || ( limit < b ) ) {
-        throw invalidColor( "Bad Color : blue channel was out of range [0;255]" );
-    }
-
-}
 
 
 /// Can create or build a gray Image in 2D format, where the intensity or depth is coded on one byte
@@ -998,13 +968,13 @@ private:
 
 
     /// The color black in shade of gray
-    static constexpr Color black{ 0, 0, 0 };
+    static const Color black;
 
     /// The default color for grayImage is black
-    static constexpr const Color& defaultColor = black;
+    static const Color& defaultColor;
 
     /// The default intensity so default number of shades
-    static constexpr Shade defaultIntensity = imageUtils::maxIntensity;
+    static const Shade defaultIntensity;
 
     static constexpr auto defaultJPEGQuality = 75;
 
@@ -1023,7 +993,7 @@ private:
     /// \exception invalidWidth if the given width is outside ]0; maxWidth]
     /// \exception invalidHeight if the given height is outside ]0;maxHeight]
     /// \exception invalidIntensity if the given intensity is outside [0;maxShades]
-    /// \exception invalidArray if the given vector don't have the good size like vector_size == width * height
+    /// \exception invalidSizeArray if the given vector don't have the good size like vector_size == width * height
     /// \exception badValuePixel if a pixel in the given vector, have a value above the intensity
     ColorImage( intmax_t width, intmax_t height, intmax_t intensity, std::vector<Color>&& pixels );
 

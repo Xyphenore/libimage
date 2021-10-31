@@ -59,6 +59,20 @@ int main( int argc, char* argv[] ) {
         pimg->writePGM( ot1, Format::WRITE_IN::BINARY );
         pbilinear->writePGM( ot2, Format::WRITE_IN::BINARY );
 
+        auto grey = GrayImage( imageUtils::Dimension<>{10, 10}, 10);
+        for ( int i = 00; i < 10; i++ ) {
+            grey.drawLine( imageUtils::Point{i,0}, 10, i, imageUtils::TYPE::VERTICAL);
+        }
+
+        grey.drawLine( imageUtils::Point{0,0}, 10, 1, imageUtils::TYPE::HORIZONTAL);
+
+
+        ofstream out("../ressources/grey.pgm", ios::binary);
+        grey.writePGM( out );
+
+
+
+
     } // Trois types d'exceptions seront attrapés (les chaines C et C++ ainsi que
         // les std::exception et toutes ses dérivées). N'utilisez pas autre chose !
     catch ( exception& e ) { cerr << "Exception :" << e.what() << endl; } catch ( string& e ) {
