@@ -61,6 +61,7 @@ namespace Format {
         ASCII, BINARY, NO_RLE, RLE
     };
 
+    // Ce qui suit n'a pas été utilisé, il aurait dû servir à rendre le code plus clean
     /// Represents different PNM formats can be read
     /// More information : http://netpbm.sourceforge.net/doc/pnm.html
     /// \note This list was created in 2021, it can be modified in the future
@@ -108,7 +109,7 @@ public:
     /// \exception invalidWidth if the given width is outside ]0; maxWidth]
     /// \exception invalidHeight if the given height is outside ]0;maxHeight]
     /// \exception std::bad_alloc if the memory allocation fails
-    [[deprecated ("Please use a constructor with the structure Dimension")]]
+    // [[deprecated ("Please use a constructor with the structure Dimension")]]
     GrayImage( intmax_t width, intmax_t height );
 
     /// Build a grayImage with the given Dimension(width, height) and the default intensity
@@ -135,7 +136,7 @@ public:
     /// \exception invalidHeight if the given height is outside ]0;maxHeight]
     /// \exception invalidIntensity if the given intensity is outside [0;maxShades]
     /// \exception std::bad_alloc if the memory allocation fails
-    [[deprecated ("Please use a constructor with the structure Dimension")]]
+    // [[deprecated ("Please use a constructor with the structure Dimension")]]
     GrayImage( intmax_t width, intmax_t height, intmax_t intensity );
 
     /// Build a grayImage with the given Dimension(width, height) and intensity
@@ -179,7 +180,7 @@ public:
     /// \deprecated If you assign the return reference to a variable with a larger range
     /// \deprecated And the instance died, you have a dead reference to a memory, and a bug occurred
     /// \deprecated So please use width()
-    [[deprecated ("Please use the method width(), it returns a copy of width, it's more secure")]]
+    // [[deprecated ("Please use the method width(), it returns a copy of width, it's more secure")]]
     const Width& getWidth() const noexcept;
 
     /// \return A constant reference of the height of Image
@@ -187,7 +188,7 @@ public:
     /// \deprecated If you assign the return reference to a variable with a larger range
     /// \deprecated And the instance died, you have a dead reference to a memory, and a bug occurred
     /// \deprecated So please use height()
-    [[deprecated ("Please use the method height(), it returns a copy of height, it's more secure")]]
+    // [[deprecated ("Please use the method height(), it returns a copy of height, it's more secure")]]
     const Height& getHeight() const noexcept;
 
     /// \return A copy of width of Image
@@ -208,7 +209,7 @@ public:
     /// \exception invalidPosition if x is not in [0; width[
     /// \exception invalidPosition if y is not int [0; height[
     /// \warning Don't verify the value affected in the selected pixel
-    [[deprecated ("Please use the method setPixel( pixel, color )")]]
+    // [[deprecated ("Please use the method setPixel( pixel, color )")]]
     Shade& pixel( intmax_t x, intmax_t y );
 
     /// \return A constant reference of the pixel at the position x,y
@@ -219,7 +220,7 @@ public:
     /// \param[in] position x,y
     /// \exception invalidPosition if x is not in [0; width[
     /// \exception invalidPosition if y is not int [0; height[
-    [[deprecated ("Please use the method getPixel( pixel )")]]
+    // [[deprecated ("Please use the method getPixel( pixel )")]]
     const Shade& pixel( intmax_t x, intmax_t y ) const;
 
     /// Modify the pixel with the given color
@@ -249,7 +250,7 @@ public:
     /// \deprecated Please use the method fill, it has more sense
     /// \pre The given color needs to be in gray's shades in [0, maxIntensity]
     /// \post The image fills with the given color
-    [[deprecated ("Please use the method fill, it has more sense")]]
+    // [[deprecated ("Please use the method fill, it has more sense")]]
     void clear( intmax_t color );
 
     /// Fill the image with the given color
@@ -271,7 +272,7 @@ public:
     /// \exception invalidHeight if height does not respect precondition : (given y + given height) needs to be in ]0; image's height[
     /// \exception invalidCoordinateX if x does not in [0; image's width[
     /// \exception invalidCoordinateY if y does not in [0; image's height[
-    [[deprecated ("Please use drawRectangle(Point, Dimension)")]]
+    // [[deprecated ("Please use drawRectangle(Point, Dimension)")]]
     void rectangle( intmax_t x, intmax_t y, intmax_t width, intmax_t height );
 
 
@@ -290,7 +291,7 @@ public:
     /// \exception invalidCoordinateX if x does not in [0; image's width[
     /// \exception invalidCoordinateY if y does not in [0; image's height[
     /// \exception invalidColor if color does not in [0; image's intensity]
-    [[deprecated ("Please use drawRectangle(Point, Dimension, color)")]]
+    // [[deprecated ("Please use drawRectangle(Point, Dimension, color)")]]
     void rectangle( intmax_t x, intmax_t y, intmax_t width, intmax_t height, intmax_t color );
 
 
@@ -307,7 +308,7 @@ public:
     /// \exception invalidHeight if height does not respect this : given y + given height needs to be in ]0; image's height[
     /// \exception invalidCoordinateX if x does not in [0; image's width[
     /// \exception invalidCoordinateY if y does not in [0; image's height[
-    [[deprecated ("Please use drawRectangle(Point, Dimension, imageUtils::TYPE::FILLED)")]]
+    // [[deprecated ("Please use drawRectangle(Point, Dimension, imageUtils::TYPE::FILLED)")]]
     void fillRectangle( intmax_t x, intmax_t y, intmax_t width, intmax_t height );
 
 
@@ -326,7 +327,7 @@ public:
     /// \exception invalidCoordinateX if x does not in [0; image's width[
     /// \exception invalidCoordinateY if y does not in [0; image's height[
     /// \exception invalidColor if color does not in [0; image's intensity]
-    [[deprecated ("Please use drawRectangle(Point, Dimension, color, imageUtils::TYPE::FILLED")]]
+    // [[deprecated ("Please use drawRectangle(Point, Dimension, color, imageUtils::TYPE::FILLED")]]
     void fillRectangle( intmax_t x, intmax_t y, intmax_t width, intmax_t height, intmax_t color );
 
     /// Draw a rectangle with the given Dimension(width, height) and with it top left corner Point(x,y)
@@ -429,7 +430,7 @@ public:
     /// \exception invalidWidth if newWidth does not in ]0; maxWidth]
     /// \exception invalidHeight if newHeight does not in ]0; maxHeight]
     /// \exception std::bad_alloc if the new image is too large to store
-    [[deprecated ("Please use simpleScale( Dimension ), is more safe because the function return a unique_ptr")]]
+    // [[deprecated ("Please use simpleScale( Dimension ), is more safe because the function return a unique_ptr")]]
     GrayImage* simpleScale( intmax_t newWidth, intmax_t newHeight ) const;
 
     /// Created the same image of called image, but scale to Dimension(newWidth,newHeight), with the algorithm of simple scale
@@ -451,7 +452,7 @@ public:
     /// \exception invalidWidth if newWidth does not in ]0; maxWidth]
     /// \exception invalidHeight if newHeight does not in ]0; maxHeight]
     /// \exception std::bad_alloc if the new image is too large to store
-    [[deprecated ("Please use bilinearScale( Dimension ), is more safe because the function return a unique_ptr")]]
+    // [[deprecated ("Please use bilinearScale( Dimension ), is more safe because the function return a unique_ptr")]]
     GrayImage* bilinearScale( intmax_t newWidth, intmax_t newHeight ) const;
 
     /// Created the same image of called image, but scale to newWidth and newHeight, with the algorithm of bilinear scale
@@ -508,7 +509,7 @@ public:
     /// \exception std::bad_alloc if the memory allocation failed
     /// \exception alwaysData if the stream always contains data
     /// \exception invalidSizeRepresentationPixel if the END OF STREAM was encountered before the reach width * height pixels
-    [[deprecated ("Please use the method readPGM_secured who return an unique_ptr")]]
+    // [[deprecated ("Please use the method readPGM_secured who return an unique_ptr")]]
     static GrayImage* readPGM( std::istream& is );
 
     /// Read the given input stream and create a gray Image
@@ -592,11 +593,14 @@ private:
     createGrayImage( imageUtils::Dimension<> dim, intmax_t intensity, std::vector<Shade>&& pixels );
 };
 
-
+/// This class is for create a rgb color
 class Color {
 public:
+    /// Build a default color, so a black color (0,0,0)
     Color() = default;
 
+    /// Build a color with the given red, green and blue shade
+    /// \thorw invalidColor if one shade is above the maxIntensity aka 255, and if one shade is below 0
     Color( intmax_t r, intmax_t g, intmax_t b );
 
     Color( const Color& ) = default;
@@ -699,7 +703,7 @@ public:
     /// \deprecated Please use the method fill, it has more sense
     /// \pre The given color needs to be in gray's shades in [0, maxIntensity]
     /// \post The image fills with the given color
-    [[ deprecated ("Please use the method fill, it has more sense") ]]
+    // [[ deprecated ("Please use the method fill, it has more sense") ]]
     void clear( Color color );
 
     /// Fill the image with the given color
@@ -862,7 +866,7 @@ public:
     /// \pre A good output stream
     /// \post The called image was output in the given the stream
     /// \deprecated Use writeTGA( std::ostream& os, Format::WRITE_IN f ), have more sense
-    [[deprecated ("Use writeTGA( std::ostream& os, Format::WRITE_IN f ), have more sense")]]
+    // [[deprecated ("Use writeTGA( std::ostream& os, Format::WRITE_IN f ), have more sense")]]
     void writeTGA( std::ostream& os, bool rle ) const;
 
     /// Write in the given output stream the called image in the format TARGA
@@ -879,12 +883,13 @@ public:
     /// \post The called image was output in the given the stream
     void writeJPEG( const char* output ) const;
 
+    // JPEG_LIB Attend que quality soit un int
     /// Write in the given output stream the called image in the format JPEG
     /// \note Check the representation of JPEG format : URL
     /// \note Or : URL
     /// \pre A good output stream
     /// \post The called image was output in the given the stream
-    void writeJPEG( const char* output, unsigned int quality ) const;
+    void writeJPEG( const char* output, int quality ) const;
 
 
     /// Read the given input stream and create a gray Image
@@ -958,6 +963,10 @@ public:
     /// \exception invalidSizeRepresentationPixel if the END OF STREAM was encountered before the reach width * height pixels
     static ColorImage* readJPEG( const char* input );
 
+    /// Not done
+    /// Give two point and one color, and this function draw a right line from point 1 to point 2
+    void line( intmax_t x1, intmax_t y1, intmax_t x2, intmax_t y2, Color color );
+
 
 private:
     const Width width_;
@@ -976,6 +985,7 @@ private:
     /// The default intensity so default number of shades
     static const Shade defaultIntensity;
 
+    /// Default quality for JPEG
     static constexpr auto defaultJPEGQuality = 75;
 
 
@@ -1011,7 +1021,17 @@ private:
     /// \exception invalidIntensity if the given intensity is outside [0;maxShades]
     /// \exception std::bad_alloc if the memory allocation fails
     static std::unique_ptr<ColorImage> createColorImage( intmax_t width, intmax_t height, intmax_t intensity );
+
+    /// This method is use in the method line
+    /// Just apply Behensam to draw line
+    void Behensem2Octants( intmax_t x1, intmax_t y1, intmax_t x2, intmax_t y2, Color color );
 };
+
+// BETA
+inline void ColorImage::line( const intmax_t x1, const intmax_t y1,
+                              const intmax_t x2, const intmax_t y2, const Color color ) {
+    Behensem2Octants(x1,y1,x2,y2,color);
+}
 
 // Inline methods
 
