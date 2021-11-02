@@ -4,8 +4,8 @@
 // Options de correction
 #define CORR_PGMASCII //P2
 #define CORR_PPMASCII //P3
-//#define CORR_READCOLORJPEG
-//#define CORR_WRITECOLORJPEG
+#define CORR_READCOLORJPEG
+#define CORR_WRITECOLORJPEG
 //#define CORR_READCOLORTGARLE
 // #define CORR_BRESENHAM
 // #define CORR_TEMPLATE
@@ -1013,14 +1013,6 @@ private:
     static std::unique_ptr<ColorImage> createColorImage( intmax_t width, intmax_t height, intmax_t intensity );
 };
 
-// Beta
-inline void ColorImage::writeJPEG( const char* const output ) const { writeJPEG( output, defaultJPEGQuality ); }
-
-inline ColorImage* ColorImage::readJPEG( const char* const input ) {
-    // Do nothing
-    return createColorImage( 10, 10, 10 ).release();
-}
-
 // Inline methods
 
 // GrayImage's methods
@@ -1099,6 +1091,7 @@ inline void GrayImage::drawRectangle(
 // Writers
 inline void GrayImage::writePGM( std::ostream& os ) const { writePGM( os, Format::WRITE_IN::BINARY ); }
 
+inline void ColorImage::writeJPEG( const char* const output ) const { writeJPEG( output, defaultJPEGQuality ); }
 
 
 

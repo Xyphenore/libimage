@@ -48,9 +48,11 @@ int main( int argc, char* argv[] ) {
 
         ifstream input( "../ressources/images/chat.tga", ios::binary );
         auto chat = ColorImage::readTGA( input );
+        input.close();
 
         ofstream output( "../ressources/chat_out.tga", ios::binary );
         chat->writeTGA( output, Format::WRITE_IN::NO_RLE );
+        output.close();
 
 
         ifstream in2( "../ressources/images/palette_bl.tga", ios::binary );
@@ -65,6 +67,10 @@ int main( int argc, char* argv[] ) {
 
         plbl->writeTGA( ou2, Format::WRITE_IN::NO_RLE );
         pltl->writeTGA( ou3, Format::WRITE_IN::NO_RLE );
+        in2.close();
+        in3.close();
+        ou2.close();
+        ou3.close();
 
         signed char c = 10;
         std::cout << ( ( c & 0b1000'0000 ) == 0b1000'0000 ) << '\n';
@@ -73,6 +79,9 @@ int main( int argc, char* argv[] ) {
         auto colour = ColorImage::readPPM( in5 );
         ofstream ou5( "../ressources/chanel.tga", ios::binary );
         colour->writeTGA( ou5 );
+
+        in5.close();
+        ou5.close();
 
         ofstream ou6( "../ressources/chanel.ppm", ios::binary );
         colour->writePPM( ou6 );
@@ -83,6 +92,29 @@ int main( int argc, char* argv[] ) {
         colourr->rectangle( 15, 15, 90, 90, { 0, 255, 0 } );
         colourr->rectangle( 20, 20, 80, 80, { 0, 0, 255 } );
         colourr->writeJPEG( "../ressources/chat.jpeg", 85 );
+        ofstream ou10( "../ressources/chatcolour.ppm", ios::binary);
+        colourr->writePPM( ou10);
+
+        ou10.close();
+
+        ou6.close();
+        in9.close();
+
+        delete colourr;
+        delete colour;
+        delete chat;
+        delete plbl;
+        delete pltl;
+
+        auto test = ColorImage::readJPEG( "../ressources/images/chat.jpg" );
+        ofstream ou15( "../ressources/chat10.ppm", ios::binary);
+        test->writePPM( ou15);
+
+        ofstream ou16("../ressources/chat10.tga", ios::binary);
+        test->writeTGA(ou16);
+
+        test->writeJPEG("../ressources/chat10.jpeg");
+
 
 
     } // Trois types d'exceptions seront attrapés (les chaines C et C++ ainsi que

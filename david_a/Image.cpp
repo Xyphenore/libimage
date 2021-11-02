@@ -973,12 +973,7 @@ void ColorImage::writeTGA( std::ostream& os, const Format::WRITE_IN f ) const {
         }
     }
     else {
-        // Cas où l'image est compressée RLE
-        // On distingue le compteur de pixel différent et le compteur d'occurence
-
-        int raw = 0; // Compte le nombre de pixels différents se suivant
-        int occ = 0; // compte le nombre d'occurence de pixels identiques se répétant successivement
-
+        // On swap les lignes pour pouvoir bien affiché un fichier commençant avec l'origine en bas à gauche
         std::vector<Color> swappedPixels( width_ * height_ );
 
         for ( size_t y = 0; y < height_; ++y ) {
@@ -987,71 +982,63 @@ void ColorImage::writeTGA( std::ostream& os, const Format::WRITE_IN f ) const {
             }
         }
 
-        for ( size_t i = 0; i < ( width_ * height_ ) - 1; i++ ) {
-            // Si le pixel courant est identique au pixel suivant
-            if ( swappedPixels[i] == swappedPixels[i + 1] ) {
-                // On ne code que des paquet compressé contenant 128 pixels
-                // au dela on code un nouveau paquet compressé
-                if ( occ < 128 ) {
-                    occ++;
-                    // si le pixel courant est identique au pixel suivant
-                    // mais différent du pixel précédent.
-                    if ( raw > 0 ) {
-                        os.put( ( raw - 1 ) ); // pour forcer le bit de poids fort à 0
-                        while ( raw > 0 ) {
-                            os.put( swappedPixels[i - raw].b_ );
-                            os.put( swappedPixels[i - raw].g_ );
-                            os.put( swappedPixels[i - raw].r_ );
-                            raw--;
-                        }
-                        raw = 0;
-                    }
+        auto maxLength = width_ * height_;
+        auto index = 0;
+        Color color;
+        int prevCol;
+        Color currChunk[128];
+
+        while ( index < maxLength ) {
+            bool isRle = false;
+            color = swappedPixels[index];
+            currChunk[0] = color;
+
+            int rle = 1;
+
+            while ( (index + rle) < maxLength ) {
+                if ( (color != swappedPixels[index + rle]) || (rle == 128)) {
+                    isRle = (rle > 1);
+                    break;
                 }
-                else {
-                    // pour ne pas dépasser 128
-                    // on insère le codage des pixels identiques compressés
-                    os.put( ( occ ) | 0x80 );  // pour forcer le bit de poids fort à 1
-                    os.put( swappedPixels[i].b_ );
-                    os.put( swappedPixels[i].g_ );
-                    os.put( swappedPixels[i].r_ );
-                    raw = 0;
-                    occ = 0;
-                }
+                rle++;
+            }
+
+            if ( isRle ) {
+                os.put(128 | (rle -1) );
+                os.put( color.b_ );
+                os.put( color.g_ );
+                os.put( color.r_ );
             }
             else {
-                // au dela de 128 pixels différents consécutifs on part sur une nouvelle suite de pixels
-                if ( raw < 128 ) {
-                    raw++;
+                rle = 1;
 
-                    // si le pixel courant est différent du pixel suivant
-                    // mais identique au pixel précédent
-                    if ( occ > 0 ) {
-                        os.put( ( occ ) | 0x80 );  // pour forcer le bit de poids fort à 1
-                        os.put( swappedPixels[i].b_ );
-                        os.put( swappedPixels[i].g_ );
-                        os.put( swappedPixels[i].r_ );
-                        occ = 0;
-                        raw = 0;
+                while ( (index + rle) < maxLength ) {
+                    if ( ((color != swappedPixels[index + rle]) && (rle < 128)) || (rle < 3)) {
+                        color = swappedPixels[index + rle];
+                        currChunk[rle] = color;
                     }
+                    else {
+                        if ( color == swappedPixels[index + rle]) {
+                            rle -= 2;
+                        }
+                        break;
+                    }
+                    rle++;
                 }
-                else {
-                    // pour ne pas dépasser 128
-                    // on insère le codage des pixels différents
-                    // pour recommencer une nouvelle suite de pixels
-                    os.put( ( raw - 1 ) );  // pour forcer le bit de poids fort à 0
-                    while ( raw > 0 ) {
-                        os.put( swappedPixels[i - raw].b_ );
-                        os.put( swappedPixels[i - raw].g_ );
-                        os.put( swappedPixels[i - raw].r_ );
-                        raw--;
-                    }
-                    raw = 0;
-                    occ = 0;
+
+                os.put(rle - 1);
+                for ( int i =0; i<rle; ++i) {
+                    color = currChunk[i];
+                    os.put( color.b_ );
+                    os.put( color.g_);
+                    os.put( color.r_);
                 }
             }
+
+            index += rle;
         }
 
-
+        os.flush();
     }
 
 
@@ -1060,46 +1047,53 @@ void ColorImage::writeTGA( std::ostream& os, const Format::WRITE_IN f ) const {
 }
 
 void ColorImage::writeJPEG( const char* output, unsigned int quality ) const {
-    jpeg_compress_struct cinfo;
+    std::vector<Shade> buffer(width_ * height_ * 3);
+    for ( size_t i =0; i < (width_ * height_); ++i ) {
+        auto x = i *3;
+        buffer[x] = pixels_[i].r_;
+        buffer[x+1] = pixels_[i].g_;
+        buffer[x+2] = pixels_[i].b_;
+    }
+
+    FILE* outfile;
+    if ( ( outfile = fopen( output, "wb" ) ) == nullptr ) {
+        throw std::runtime_error( "Erreur dans l'ouverture du fichier de sorti" );
+    }
+
+    struct jpeg_compress_struct cinfo;
 
     // Activation de l'attrapeur des erreurs
-    jpeg_error_mgr jerr;
+    struct jpeg_error_mgr jerr;
     cinfo.err = jpeg_std_error( &jerr );
 
     // Initialisation de l'objet compression
     jpeg_create_compress( &cinfo );
-
-    FILE* outfile;
-    if ( ( outfile = fopen( output, "wb" ) ) == NULL ) {
-        throw std::runtime_error( "Erreur dans l'ouverture du fichier de sorti" );
-    }
-
-    // Convert os to FILE
     jpeg_stdio_dest( &cinfo, outfile );
 
     cinfo.image_width = width_;
     cinfo.image_height = height_;
     cinfo.input_components = 3;
     cinfo.in_color_space = JCS_RGB;
-    // quality
 
     jpeg_set_defaults( &cinfo );
 
-    jpeg_set_quality( &cinfo, quality, TRUE );
+    jpeg_set_quality( &cinfo, quality, true );
 
-    jpeg_start_compress( &cinfo, TRUE );
+    jpeg_start_compress( &cinfo, true );
 
     auto row_stride = width_ * 3;
-    JSAMPROW row_pointer = new unsigned char[row_stride];
+    JSAMPROW row_pointer;
 
     while ( cinfo.next_scanline < cinfo.image_height ) {
-        row_pointer[0] = pixels_[cinfo.next_scanline].r_;
-        row_pointer[1] = pixels_[cinfo.next_scanline].g_;
-        row_pointer[2] = pixels_[cinfo.next_scanline].b_;
+        row_pointer = (JSAMPROW)&buffer[cinfo.next_scanline * row_stride];
+
         jpeg_write_scanlines( &cinfo, &row_pointer, 1 );
     }
 
     jpeg_finish_compress( &cinfo );
+
+    // Fermeture du fichier de sortie
+    fclose(outfile);
 
     jpeg_destroy_compress( &cinfo );
 }
@@ -1303,10 +1297,13 @@ ColorImage* ColorImage::readTGA( std::istream& is ) {
 
 
     // Lecture du champ d'id
-    char* idField = nullptr;
+    std::string idField;
     if ( sizeIdentificationField > 0 ) {
-        idField = new char[sizeIdentificationField];
-        is.read( reinterpret_cast<char*>(&idField), sizeIdentificationField );
+        auto idFieldRAW = new char[sizeIdentificationField];
+        is.read( idFieldRAW, sizeIdentificationField );
+
+        idField = std::string( idFieldRAW );
+        delete[] idFieldRAW;
     }
 
 
@@ -1316,13 +1313,6 @@ ColorImage* ColorImage::readTGA( std::istream& is ) {
         // Hard fixed to 24bits color
         is.read( reinterpret_cast<char*>(tabColor.data()),
                  static_cast<std::streamsize>(colorMap.countColor * sizeof( Color ) ) );
-
-//        std::cout << "Colormap : \n";
-//        for ( size_t i = 0; i < colorMap.countColor; ++i ) {
-//            std::cout << "Color " << i << " : (" << (uint16_t)tabColor[i].r_ << ","
-//            << (uint16_t)tabColor[i].g_ << "," << (uint16_t)tabColor[i].b_ << ")\n";
-//        }
-//        std::cout << "Fin colormap\n";
     }
 
 
@@ -1376,7 +1366,56 @@ ColorImage* ColorImage::readTGA( std::istream& is ) {
         }
     }
 
+
+
     // Les canaux des pixels sont inversés (b,g,r)
+}
+
+ColorImage* ColorImage::readJPEG( const char* input ) {
+    FILE* inputFile;
+    if ( (inputFile = fopen(input, "rb")) == nullptr ) {
+        throw std::runtime_error("Erreur lors de l'ouverture du fichier input");
+    }
+
+    struct jpeg_decompress_struct cinfo;
+
+    struct jpeg_error_mgr jerr;
+    cinfo.err = jpeg_std_error(&jerr);
+
+    jpeg_create_decompress(&cinfo);
+    jpeg_stdio_src(&cinfo, inputFile);
+
+    jpeg_read_header(&cinfo, true);
+
+    jpeg_start_decompress(&cinfo);
+
+    auto rowstride = cinfo.output_width * cinfo.output_components;
+
+    std::vector<Shade> buffer( cinfo.image_height * rowstride);
+    JSAMPROW row_pointer;
+
+    while ( cinfo.output_scanline < cinfo.output_height ) {
+        row_pointer = (JSAMPROW)&buffer[cinfo.output_scanline * rowstride];
+
+        jpeg_read_scanlines(&cinfo, &row_pointer, 1);
+    }
+
+    jpeg_finish_decompress(&cinfo);
+
+    std::vector<Color> array(cinfo.image_width * cinfo.image_height);
+    for ( size_t i = 0; i < (cinfo.image_height * cinfo.image_width); ++i) {
+        auto x = i*3;
+
+        array[i] = Color(buffer[x], buffer[x+1], buffer[x+2]);
+    }
+
+
+    auto image = new ColorImage( cinfo.image_width, cinfo.image_height, 255, std::move(array));
+
+    jpeg_destroy_decompress(&cinfo);
+    fclose(inputFile);
+
+    return image;
 }
 
 
