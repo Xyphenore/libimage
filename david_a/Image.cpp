@@ -10,9 +10,7 @@
 #include <vector>
 #include <cmath>
 #include <sstream>
-#include <bitset>
 #include <type_traits>
-#include <fstream>
 
 extern "C" {
 #include <jpeglib.h>
@@ -20,16 +18,18 @@ extern "C" {
 
 const char* const identifier = "david_a";
 const char* const informations = "Beaucoup de méthodes dépréciées, car j'ai fait des méthodes soit plus sécurisées,"
-                                 "soit avec moins de paramètres et une meilleure couche d'abstraction"
-                                 "Pas eu assez de temps pour faire plus"
-                                 "Une erreur que je ne comprends pas dans l'écriture TGA RLE";
+                                 "soit avec moins de paramètres et une meilleure couche d'abstraction\n"
+                                 "Pas eu assez de temps pour faire plus\n"
+                                 "Mon objectif de propreté serait tout le code contenu dans la classe GrayImage,"
+                                 " qui est plus sécuritaire et propre\n"
+                                 "Choix de conception : utilisation des intmax_t au lieu des uint8_t pour les paramètres,"
+                                 " ainsi je permets aux utilisateurs de pouvoir entrer des entrées négatives et ainsi"
+                                 " ils reçoivent des exceptions";
 
 
 
 
 using alwaysData = std::runtime_error;
-using badValuePixel = std::runtime_error;
-
 using invalidType = std::invalid_argument;
 using invalidWidth = std::invalid_argument;
 using invalidHeight = std::invalid_argument;
@@ -49,20 +49,6 @@ using invalidColor = std::invalid_argument;
 // activer les exceptions pour les flux
 // on doit vérifier dans quel type de boutisme on lit/ecrit dans les fonctions respective
 
-/*static Color operator*( const Color& c, const long double alpha ) {
-    return operator*(alpha, c);
-}
-
- static Color operator*( const Color& c, const double alpha ) {
-    return operator*(alpha, c);
-}
- static Color operator*( const double alpha, const Color& c ) {
-    return { static_cast<uint8_t>(std::round(c.r_ * alpha)),
-             static_cast<uint8_t>(std::round(c.g_ * alpha)),
-             static_cast<uint8_t>(std::round(c.b_ * alpha))
-    };
-}
-*/
 namespace imageUtils {
     // TODO Documenter
     constexpr std::streamsize oneByte = 1;
@@ -81,11 +67,13 @@ namespace imageUtils {
 
 
     /// Activate the exception's throw for failbit at true, on an istream
+    __attribute__((unused))
     static void activateExceptionsForFailBitOn( std::ios& ios ) {
         ios.exceptions( std::ios_base::failbit );
     }
 
     /// Activate the exception's throw for badbit at true, on an istream
+    __attribute__((unused))
     static void activateExceptionsForBadBitOn( std::ios& ios ) {
         ios.exceptions( std::ios_base::badbit );
     }
@@ -412,7 +400,20 @@ static bool operator==( const Color& c1, const Color& c2 ) {
 static bool operator!=( const Color& c1, const Color& c2 ) {
     return !operator==( c1, c2 );
 }
+/*static Color operator*( const Color& c, const long double alpha ) {
+    return operator*(alpha, c);
+}
 
+ static Color operator*( const Color& c, const double alpha ) {
+    return operator*(alpha, c);
+}
+ static Color operator*( const double alpha, const Color& c ) {
+    return { static_cast<uint8_t>(std::round(c.r_ * alpha)),
+             static_cast<uint8_t>(std::round(c.g_ * alpha)),
+             static_cast<uint8_t>(std::round(c.b_ * alpha))
+    };
+}
+*/
 
 
 
@@ -561,6 +562,7 @@ void GrayImage::drawRectangle(
     switch ( filled ) {
         case imageUtils::FILL::NO :
             drawLine( start, rectangleDim.width, color, imageUtils::TYPE::HORIZONTAL );
+            // On soustrait deux car on trace déjà deux pixels de la ligne suivante
             drawLine( imageUtils::Point{ start.x, start.y + 1 }, rectangleDim.height - 2, color,
                       imageUtils::TYPE::VERTICAL );
             drawLine( imageUtils::Point{ ( start.x - 1 ) + rectangleDim.width, start.y + 1 }, rectangleDim.height - 2,
@@ -581,6 +583,7 @@ void GrayImage::drawRectangle(
 }
 
 // Writers
+// TODO Non opérationnel, impossible d'écrire en FULL ASCII
 void GrayImage::writePGM( std::ostream& os, const Format::WRITE_IN f ) const {
     using Format = Format::WRITE_IN;
     const auto& imageDim = dimension;
@@ -604,6 +607,7 @@ void GrayImage::writePGM( std::ostream& os, const Format::WRITE_IN f ) const {
                   static_cast<std::streamsize>(imageDim.width * imageDim.height * sizeof( Shade )) );
     }
     else {
+        throw std::runtime_error("Le format full ascii n'est pas encore pris en charge");
         // Full ASCII format
         // TODO a refaire car la sortie n'est pas bonne
         constexpr uint16_t pgm_limit_char = 70;
@@ -624,9 +628,10 @@ void GrayImage::writePGM( std::ostream& os, const Format::WRITE_IN f ) const {
 
 // Readers
 std::unique_ptr<GrayImage> GrayImage::readPGM_secured( std::istream& is ) {
-    char* p = new char[2];
+    // Lecture du nombre magique pour identifier le type d'image
+    auto p = new char[2];
     is.read( p, 2 );
-    std::string type( p );
+    const std::string type( p );
 
     if ( ( type != "P5" ) && ( type != "P2" ) ) {
         throw invalidType( "Bad format of file" );
@@ -888,6 +893,8 @@ void ColorImage::writePPM( std::ostream& os, const Format::WRITE_IN f ) const {
     }
     else {
         // Full ASCII format
+        // TODO Corriger l'écriture en FULL ASCII
+        throw std::runtime_error("La fonction ne permet pas d'écrire en full ascii");
         constexpr uint16_t pgm_limit_char = 70;
 
         os << "P3\n" << "# Image sauvegardée par " << ::identifier << '\n'
@@ -902,7 +909,7 @@ void ColorImage::writePPM( std::ostream& os, const Format::WRITE_IN f ) const {
         }
     }
 
-    os << '\n' << std::flush;
+    os << '\n';
 }
 
 void ColorImage::writeTGA( std::ostream& os, const Format::WRITE_IN f ) const {
@@ -925,6 +932,7 @@ void ColorImage::writeTGA( std::ostream& os, const Format::WRITE_IN f ) const {
         os.put( 10 );
     }
 
+    // Colormap
     // oneByte 4,5 = 0
     os.put( 0 ).put( 0 );
 
@@ -933,6 +941,8 @@ void ColorImage::writeTGA( std::ostream& os, const Format::WRITE_IN f ) const {
 
     // oneByte 8 = 0 because no color map
     os.put( 0 );
+
+    // Spec Image
 
     // oneByte 9,10 = X origin of image (lo-hi)
     os.put( 0 ).put( 0 );
@@ -949,7 +959,7 @@ void ColorImage::writeTGA( std::ostream& os, const Format::WRITE_IN f ) const {
     // oneByte 17 = 24 because with use Targa 24 bits
     os.put( 24 );
 
-    // TODO Mettre la valeur à 0 pour que l'origine soit en bas à gauche
+    // Mettre la valeur à 0 pour que l'origine soit en bas à gauche
     // oneByte 18 = {  bits0-3 = 0000 because 24bits,
     //              bit4 = 0 because the origin is left
     //              bit5 = {0,1} its origin of image (lower left, upper left)
@@ -962,14 +972,20 @@ void ColorImage::writeTGA( std::ostream& os, const Format::WRITE_IN f ) const {
 
     // oneByte 18 - size of Image = pixels
     // Vérifier la taille de la classe Color
-    /*os.write( reinterpret_cast<const char*>(pixels_.data()),
-              static_cast<std::streamsize>(width_ * height_ * sizeof( Color )) );*/
 
     if ( f == Format::NO_RLE ) {
+        std::vector<Color> swappedPixels( width_ * height_ );
+
+        for ( size_t y = 0; y < height_; ++y ) {
+            for ( size_t x = 0; x < width_; ++x ) {
+                swappedPixels.at( ( y * width_ ) + x ) = pixels_.at( ( ( height_ - 1 - y ) * width_ ) + x );
+            }
+        }
+
         for ( size_t i = 0; i != static_cast<size_t>(width_ * height_); ++i ) {
-            os.put( pixels_[i].r_ );
-            os.put( pixels_[i].g_ );
-            os.put( pixels_[i].b_ );
+            os.put( static_cast<char>(swappedPixels[i].b_) );
+            os.put( static_cast<char>(swappedPixels[i].g_) );
+            os.put( static_cast<char>(swappedPixels[i].r_) );
         }
     }
     else {
@@ -982,32 +998,32 @@ void ColorImage::writeTGA( std::ostream& os, const Format::WRITE_IN f ) const {
             }
         }
 
-        auto maxLength = width_ * height_;
-        auto index = 0;
+        const size_t maxLength = width_ * height_;
+        size_t index = 0;
         Color color;
-        int prevCol;
-        Color currChunk[128];
+        //Color currChunk[128];
+        std::array<Color, 128> currChunk;
 
         while ( index < maxLength ) {
             bool isRle = false;
             color = swappedPixels[index];
             currChunk[0] = color;
 
-            int rle = 1;
+            size_t rle = 1;
 
             while ( (index + rle) < maxLength ) {
-                if ( (color != swappedPixels[index + rle]) || (rle == 128)) {
+                if ( (color != swappedPixels[index + rle]) || ( 128 == rle )) {
                     isRle = (rle > 1);
                     break;
                 }
-                rle++;
+                ++rle;
             }
 
             if ( isRle ) {
-                os.put(128 | (rle -1) );
-                os.put( color.b_ );
-                os.put( color.g_ );
-                os.put( color.r_ );
+                os.put(static_cast<char>(128 | (rle -1)) );
+                os.put( static_cast<char>(color.b_) );
+                os.put( static_cast<char>(color.g_) );
+                os.put( static_cast<char>(color.r_) );
             }
             else {
                 rle = 1;
@@ -1023,15 +1039,15 @@ void ColorImage::writeTGA( std::ostream& os, const Format::WRITE_IN f ) const {
                         }
                         break;
                     }
-                    rle++;
+                    ++rle;
                 }
 
-                os.put(rle - 1);
-                for ( int i =0; i<rle; ++i) {
+                os.put(static_cast<char>(rle - 1) );
+                for ( size_t i =0; i < rle; ++i) {
                     color = currChunk[i];
-                    os.put( color.b_ );
-                    os.put( color.g_);
-                    os.put( color.r_);
+                    os.put( static_cast<char>(color.b_) );
+                    os.put( static_cast<char>(color.g_) );
+                    os.put( static_cast<char>(color.r_) );
                 }
             }
 
@@ -1046,7 +1062,8 @@ void ColorImage::writeTGA( std::ostream& os, const Format::WRITE_IN f ) const {
     // Maybe add a basic footer
 }
 
-void ColorImage::writeJPEG( const char* output, unsigned int quality ) const {
+void ColorImage::writeJPEG( const char* output, const int quality ) const {
+    // TODO L'écriture est figée, on ne gère très peu d'exceptions, et c'est l'exemple donnée dans les fichiers du tp
     std::vector<Shade> buffer(width_ * height_ * 3);
     for ( size_t i =0; i < (width_ * height_); ++i ) {
         auto x = i *3;
@@ -1060,10 +1077,10 @@ void ColorImage::writeJPEG( const char* output, unsigned int quality ) const {
         throw std::runtime_error( "Erreur dans l'ouverture du fichier de sorti" );
     }
 
-    struct jpeg_compress_struct cinfo;
+    jpeg_compress_struct cinfo;
 
     // Activation de l'attrapeur des erreurs
-    struct jpeg_error_mgr jerr;
+    jpeg_error_mgr jerr;
     cinfo.err = jpeg_std_error( &jerr );
 
     // Initialisation de l'objet compression
@@ -1194,6 +1211,9 @@ static bool holdColorMap( std::istream& is ) {
 }
 
 ColorImage* ColorImage::readTGA( std::istream& is ) {
+    // TODO Factoriser le code
+    // TODO Rendre expressif le code avec des appels de fonctions -> abstraction
+
     /*
     constexpr size_t lengthFooter = 26;
     const std::string SIGNATURE("TRUEVISION-XFILE");
@@ -1315,6 +1335,7 @@ ColorImage* ColorImage::readTGA( std::istream& is ) {
                  static_cast<std::streamsize>(colorMap.countColor * sizeof( Color ) ) );
     }
 
+    ColorImage* pimg = nullptr;
 
     std::vector<Color> pixels( width * height );
     if ( type == 2 ) {
@@ -1331,10 +1352,10 @@ ColorImage* ColorImage::readTGA( std::istream& is ) {
                 }
             }
 
-            return new ColorImage( width, height, maxIntensity, std::move( swappedPixels ) );
+            pimg = new ColorImage( width, height, maxIntensity, std::move( swappedPixels ) );
         }
         else {
-            return new ColorImage( width, height, maxIntensity, std::move( pixels ) );
+            pimg = new ColorImage( width, height, maxIntensity, std::move( pixels ) );
         }
     }
     else if ( type == 1 ) {
@@ -1359,16 +1380,14 @@ ColorImage* ColorImage::readTGA( std::istream& is ) {
                 }
             }
 
-            return new ColorImage( width, height, maxIntensity, std::move( swappedPixels ) );
+            pimg = new ColorImage( width, height, maxIntensity, std::move( swappedPixels ) );
         }
         else {
-            return new ColorImage( width, height, maxIntensity, std::move( pixels ) );
+            pimg = new ColorImage( width, height, maxIntensity, std::move( pixels ) );
         }
     }
 
-
-
-    // Les canaux des pixels sont inversés (b,g,r)
+    return pimg;
 }
 
 ColorImage* ColorImage::readJPEG( const char* input ) {
@@ -1418,7 +1437,85 @@ ColorImage* ColorImage::readJPEG( const char* input ) {
     return image;
 }
 
+ColorImage* ColorImage::readMaison2( std::istream& is ) {
+    // Vérification du type
+    auto p = std::make_unique<char>(7);
+    is.read( p.get(), 7);
+    const std::string type(p.release());
 
+    if ( type != "Maison2" ) {
+        throw invalidType("The given file is not of type Maison2");
+    }
+
+    // Lecture de la taille de la zone commentaire
+    uint8_t sizeComments = 0;
+    is.read( reinterpret_cast<char*>(&sizeComments), oneByte);
+
+    // Lecture de la hauteur
+    uint8_t phHeight = 0;
+    // Lecture du poids fort
+    is.read( reinterpret_cast<char*>(&phHeight), oneByte);
+
+    // Lecture du poids faible
+    uint8_t pfHeight = 0;
+    is.read( reinterpret_cast<char*>(&pfHeight), oneByte);
+
+    // Merci https://stackoverflow.com/questions/6090561/how-to-use-high-and-low-bytes/6090641
+    const uint16_t height = (pfHeight | (phHeight << 8));
+
+    // Lecture de la largeur
+    uint8_t phWidth = 0;
+    is.read( reinterpret_cast<char*>(&phWidth), oneByte);
+
+    uint8_t pfWidth = 0;
+    is.read( reinterpret_cast<char*>(&pfWidth), oneByte);
+
+    const uint16_t width = (pfWidth | (phWidth << 8));
+
+    // Récupération du commentaire et affichage
+    auto str = new char[sizeComments];
+    if ( sizeComments > 0 ) {
+        is.read( str, sizeComments );
+        const std::string comment( str );
+
+        std::cout << comment << '\n';
+    }
+    delete[] str;
+
+    // La suite est des pixels
+    std::vector<Color> pixels(width * height);
+
+    std::cout << "green\n";
+
+    // Lecture des pixels verts
+    for ( size_t i = 0; i < (width * height); ++i ) {
+        uint8_t green = 0;
+        is.read( reinterpret_cast<char*>(&green), oneByte);
+        pixels.at(i).g_ = green;
+    }
+
+    std::cout << "blue\n";
+
+    // Lecture des pixels bleus
+    for ( size_t i = 0; i < (width * height); ++i ) {
+        uint8_t blue = 0;
+        is.read( reinterpret_cast<char*>(&blue), oneByte);
+        pixels.at(i).b_ = blue;
+    }
+
+    std::cout << "red\n";
+
+    // Lecture des pixels rouge
+    for ( size_t i = 0; i < (width * height); ++i ) {
+        uint8_t red = 0;
+        is.read( reinterpret_cast<char*>(&red), oneByte);
+        pixels.at(i).r_ = red;
+    }
+
+    std::cout << "fin\n";
+
+    return new ColorImage(width, height, maxIntensity, std::move(pixels));
+}
 
 // Scaler
 ColorImage* ColorImage::simpleScale( const intmax_t newWidth, const intmax_t newHeight ) const {
@@ -1490,4 +1587,80 @@ ColorImage* ColorImage::bilinearScale( const intmax_t newWidth, const intmax_t n
     }
 
     return new ColorImage(newWidth, newHeight, intensity_, std::move(pixels));
+}
+
+void ColorImage::Behensem2Octants( intmax_t x1, intmax_t y1, intmax_t x2, intmax_t y2, Color color ) {
+    auto x = x1;
+    auto y = y1;
+
+    auto longX = x2 - x1;
+    auto longY = y2 - y1;
+
+    if ( longY < longX ) { // 1er Octant
+        const auto c1 = 2 * ( longY - longX );
+        const auto c2 = 2 * longY;
+
+        auto critere = c2 - longX;
+
+        while ( x <= x2 ) {
+            pixel( x, y ) = color;
+            if ( critere >= 0 ) { // changement de ligne horizontale
+                y++;
+                critere = critere + c1;
+            }
+            else
+                // toujours la même ligne horizontale
+                critere = critere + c2;
+
+            x++; // ligne suivante, et recommence
+        }
+    }
+    else { // 2eme Octant
+        const auto c1 = 2 * ( longX - longY );
+        const auto c2 = 2 * longX;
+
+        auto critere = c2 - longY;
+
+        while ( y <= y2 ) {
+            pixel( x, y ) = color;
+            if ( critere >= 0 ) { // changement de ligne verticale
+                x++;
+                critere = critere + c1;
+            }
+            else
+                // toujours la même ligne verticale
+                critere = critere + c2;
+            y++; // ligne suivante, et recommence
+        }
+
+    }
+}
+
+ColorImage* ColorImage::anaglyphe() const {
+    const size_t demiWidth = width_ / 2;
+
+    std::vector<Color> pixels(demiWidth * height_);
+
+    for ( size_t y = 0; y < height_; ++y ) {
+        // On navigue dans la partie gauche de l'image
+        for ( size_t x = 0; x < demiWidth; ++x ) {
+            // On supprime le canal rouge
+            Color color = pixel( static_cast<intmax_t>(x),
+                                 static_cast<intmax_t>(y));
+            color.r_ = 0;
+            pixels.at( (y * demiWidth) + x) = color;
+        }
+
+        // On navigue dans la partie droite de l'image
+        for ( size_t x = demiWidth; x < width_; ++x ) {
+            // On supprime les canaux vert et bleu
+            Color color = pixel( static_cast<intmax_t>(x),
+                                 static_cast<intmax_t>(y));
+            color.g_ = 0;
+            color.b_ = 0;
+            pixels.at( (y * demiWidth) + (x-demiWidth)) = pixels.at( (y * demiWidth) + (x-demiWidth)) + color;
+        }
+    }
+
+    return new ColorImage(demiWidth, height_, maxIntensity, std::move(pixels));
 }
