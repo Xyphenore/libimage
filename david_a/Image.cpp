@@ -12,6 +12,7 @@
 #include <sstream>
 #include <bitset>
 #include <type_traits>
+#include <fstream>
 
 extern "C" {
 #include <jpeglib.h>
@@ -31,7 +32,6 @@ using invalidType = std::invalid_argument;
 using invalidWidth = std::invalid_argument;
 using invalidHeight = std::invalid_argument;
 using invalidIntensity = std::invalid_argument;
-using invalidPosition = std::invalid_argument;
 using invalidSizeArray = std::invalid_argument;
 using invalidFormat = std::invalid_argument;
 using invalidLength = std::invalid_argument;
@@ -286,42 +286,7 @@ namespace imageUtils {
             }
         }
 
-        /// Verify all pixels contained in the given vector, are under or equals to the given limit
-        /// \throw invalidType if TPixel is not integral or Color
-        /// \throw badValuePixel if a pixel is over the given limit
-        template <typename TPixel, typename TLimit>
-        static void verifyPixels( const std::vector<TPixel>& pixels, const TLimit limit ) {
-            if ( std::is_same<TPixel, Color>::value && (limit < std::numeric_limits<TLimit>::max()) ) {
-                const auto overLimit = [limit]( const Color pixel )
-                { return !inInterval( pixel.r_, Interval<TLimit>{0,limit}) ||
-                         !inInterval( pixel.g_, Interval<TLimit>{0,limit}) ||
-                         !inInterval( pixel.b_, Interval<TLimit>{0,limit});
-                };
 
-                const auto pos = std::find_if( pixels.cbegin(), pixels.cend(), overLimit );
-
-                if ( pos != pixels.cend() ) {
-                    std::ostringstream oss( "Bad pixel at ", std::ios::ate );
-                    oss << static_cast<intmax_t>( pos - pixels.cbegin() ) << " element";
-                    throw badValuePixel( oss.str() );
-                }
-            }
-            else if ( (!std::is_same<TPixel, Color>::value) && std::is_integral<TPixel>::value && (limit < std::numeric_limits<TLimit>::max()) ) {
-                const auto overLimit = [limit]( const TPixel pixel )
-                        { return !inInterval(pixel, Interval<TPixel>{0,limit}); };
-
-                const auto pos = std::find_if( pixels.cbegin(), pixels.cend(), overLimit );
-
-                if ( pos != pixels.cend() ) {
-                    std::ostringstream oss( "Bad pixel at ", std::ios::ate );
-                    oss << static_cast<intmax_t>( pos - pixels.cbegin() ) << " element";
-                    throw badValuePixel( oss.str() );
-                }
-            }
-            else {
-                throw invalidType( "The given template type was not manage by this function");
-            }
-        }
 
         /// Do nothing except throw
         /// \throw invalidSizeArray if the given vector don't have the same size of the given maxSize
@@ -421,20 +386,10 @@ Color::Color( const intmax_t r, const intmax_t g, const intmax_t b )
 : r_( static_cast<Shade>(r) ), g_( static_cast<Shade>(g) ), b_( static_cast<Shade>(b)) {
     constexpr auto limit = imageUtils::maxIntensity;
 
-    if ( ( 0 > r ) || ( limit < r ) ) {
-        throw invalidColor( "Bad Color : red channel was out of range [0;255]" );
-    }
-
-    if ( ( 0 > g ) || ( limit < g ) ) {
-        throw invalidColor( "Bad Color : green channel was out of range [0;255]" );
-    }
-
-    if ( ( 0 > b ) || ( limit < b ) ) {
-        throw invalidColor( "Bad Color : blue channel was out of range [0;255]" );
-    }
+    VERIFY::verifyShade( r, VERIFY::Interval<Shade>{ 0, limit } );
+    VERIFY::verifyShade( g, VERIFY::Interval<Shade>{ 0, limit } );
+    VERIFY::verifyShade( b, VERIFY::Interval<Shade>{ 0, limit } );
 }
-
-
 
 // Definitions of Color
 static Color operator+( const Color& c1, const Color& c2 ) {
@@ -444,17 +399,16 @@ static Color operator+( const Color& c1, const Color& c2 ) {
     };
 }
 static Color operator*( const long double alpha, const Color& c ) {
-    return { static_cast<uint8_t>(std::round(c.r_ * alpha)),
-             static_cast<uint8_t>(std::round(c.g_ * alpha)),
-             static_cast<uint8_t>(std::round(c.b_ * alpha))
-    };
+    return { static_cast<Shade>(std::round( c.r_ * alpha )), static_cast<Shade>(std::round( c.g_ * alpha )),
+             static_cast<Shade>(std::round( c.b_ * alpha )) };
 }
 
 static bool operator==( const Color& c1, const Color& c2 ) {
-    return (c1.r_ == c2.r_) && (c1.g_ == c2.g_) && (c1.b_ == c2.b_);
+    return ( c1.r_ == c2.r_ ) && ( c1.g_ == c2.g_ ) && ( c1.b_ == c2.b_ );
 }
+
 static bool operator!=( const Color& c1, const Color& c2 ) {
-    return !operator==(c1,c2);
+    return !operator==( c1, c2 );
 }
 
 
@@ -491,13 +445,17 @@ GrayImage::GrayImage( const imageUtils::Dimension<> dim, const intmax_t intensit
           intensity_( static_cast<Shade>(intensity) ), pixels_( std::move( pixels ) ) {
     // Verify all preconditions
     // TODO Factoriser en verifyDimension
-    imageUtils::VERIFY::verifyWidth( dim.width, imageUtils::VERIFY::Interval<Width>{0,imageUtils::maxWidth} );
-    imageUtils::VERIFY::verifyHeight( dim.height, imageUtils::VERIFY::Interval<Height>{0,imageUtils::maxHeight} );
+    imageUtils::VERIFY::verifyWidth( dim.width, imageUtils::VERIFY::Interval<Width>{ 0, imageUtils::maxWidth } );
+    imageUtils::VERIFY::verifyHeight( dim.height, imageUtils::VERIFY::Interval<Height>{ 0, imageUtils::maxHeight } );
 
-    imageUtils::VERIFY::verifyIntensity( intensity, imageUtils::VERIFY::Interval<Shade>{0,imageUtils::maxIntensity} );
+    imageUtils::VERIFY::verifyIntensity( intensity,
+                                         imageUtils::VERIFY::Interval<Shade>{ 0, imageUtils::maxIntensity } );
 
     imageUtils::VERIFY::verifySizeArray( pixels_, dimension.width * dimension.height );
-    imageUtils::VERIFY::verifyPixels( pixels_, intensity_ );
+
+    for ( const auto pixel: pixels_ ) {
+        VERIFY::verifyShade( pixel, VERIFY::Interval<Shade>{ 0, intensity_ } );
+    }
 }
 
 std::unique_ptr<GrayImage>
@@ -630,13 +588,14 @@ void GrayImage::writePGM( std::ostream& os, const Format::WRITE_IN f ) const {
         throw invalidFormat( "Unknown image format" );
     }
 
-    imageUtils::ASCII::verifyPixels<Shade>( pixels_, intensity_ );
+    for ( const auto pixel: pixels_ ) {
+        VERIFY::verifyShade( pixel, VERIFY::Interval<Shade>{ 0, intensity_ } );
+    }
 
     if ( f == Format::BINARY ) {
         // TODO Changer identifier par la variable environnement nom utilisateur
-        os << "P5\n" << "# Image sauvegardée par " << ::identifier << '\n' << imageDim.width << " " << imageDim.height
-           << '\n'
-           << static_cast<uint16_t>(intensity_) << '\n';
+        os << "P5\n" << "# Image sauvegardée par " << ::identifier << '\n' << imageDim.width << '\n' << imageDim.height
+           << '\n' << static_cast<uint16_t>(intensity_) << '\n';
 
 
         os.write( reinterpret_cast<const char*>(pixels_.data()),
@@ -663,8 +622,9 @@ void GrayImage::writePGM( std::ostream& os, const Format::WRITE_IN f ) const {
 
 // Readers
 std::unique_ptr<GrayImage> GrayImage::readPGM_secured( std::istream& is ) {
-    std::string type;
-    is >> type;
+    char* p = new char[2];
+    is.read( p, 2 );
+    std::string type( p );
 
     if ( ( type != "P5" ) && ( type != "P2" ) ) {
         throw invalidType( "Bad format of file" );
@@ -695,16 +655,23 @@ std::unique_ptr<GrayImage> GrayImage::readPGM_secured( std::istream& is ) {
     }
     else {
         // P2 format
-        // Utiliser from_chars()
+        // Utiliser from_chars() en C++17
+
         for ( size_t i = 0; i < ( width * height ); ++i ) {
-            is >> pixels.at( i );
+            auto tmp = 0;
+            is >> tmp;
+            pixels.at( i ) = static_cast<Shade>(tmp);
         }
     }
 
-    imageUtils::ASCII::verifyPixels( pixels, intensity );
+
+    for ( const auto pixel: pixels ) {
+        VERIFY::verifyShade( pixel, VERIFY::Interval<Shade>{ 0, intensity } );
+    }
+
     imageUtils::skip_ONEwhitespace( is );
 
-    imageUtils::verifyStreamContainData( is );
+    //imageUtils::verifyStreamContainData( is );
 
     return createGrayImage( imageUtils::Dimension<>{ width, height }, intensity, std::move( pixels ) );
 }
@@ -810,11 +777,15 @@ ColorImage::ColorImage(
         static_cast<Width>(width) ), height_( static_cast<Height>(height) ), intensity_(
         static_cast<Shade>(intensity) ), pixels_( std::move( pixels ) ) {
     // Verify all preconditions
-    imageUtils::VERIFY::verifyWidth( width, imageUtils::VERIFY::Interval<Width>{0,imageUtils::maxWidth} );
-    imageUtils::VERIFY::verifyHeight( height, imageUtils::VERIFY::Interval<Height>{0,imageUtils::maxHeight} );
+    imageUtils::VERIFY::verifyWidth( width, imageUtils::VERIFY::Interval<Width>{ 0, imageUtils::maxWidth } );
+    imageUtils::VERIFY::verifyHeight( height, imageUtils::VERIFY::Interval<Height>{ 0, imageUtils::maxHeight } );
     imageUtils::ASCII::verifySizeArray( pixels_, width_ * height_ );
-    imageUtils::VERIFY::verifyIntensity( intensity, imageUtils::VERIFY::Interval<Shade>{0,imageUtils::maxIntensity});
-    imageUtils::ASCII::verifyPixels<Color,Shade>( pixels_, intensity_ );
+    imageUtils::VERIFY::verifyIntensity( intensity,
+                                         imageUtils::VERIFY::Interval<Shade>{ 0, imageUtils::maxIntensity } );
+
+    for ( const auto color: pixels_ ) {
+        VERIFY::verifyColor( color, Color{ intensity_, intensity_, intensity_ } );
+    }
 }
 
 // Getter / Setter
@@ -901,7 +872,10 @@ void ColorImage::writePPM( std::ostream& os, const Format::WRITE_IN f ) const {
         throw invalidFormat( "Unknown image format" );
     }
 
-    imageUtils::ASCII::verifyPixels<Color>( pixels_, intensity_ );
+    // Pas utile de vérifier le max, lors de la création de couleur on vérifie déjà
+//    for ( const auto color : pixels_ ) {
+//        VERIFY::verifyColor( color, Color{intensity_, intensity_, intensity_});
+//    }
 
     if ( f == Format::BINARY ) {
         os << "P6\n" << "# Image sauvegardée par " << ::identifier << '\n' << width_ << " " << height_ << '\n'
@@ -929,34 +903,40 @@ void ColorImage::writePPM( std::ostream& os, const Format::WRITE_IN f ) const {
     os << '\n' << std::flush;
 }
 
-void ColorImage::writeTGA( std::ostream& os, const Format::WRITE_IN ) const {
+void ColorImage::writeTGA( std::ostream& os, const Format::WRITE_IN f ) const {
     // oneByte 1 = 0 because no identification information for the image
     os.put( 0 );
 
     // oneByte 2 = 0 because no color map
     os.put( 0 );
 
-    // oneByte 3 = 2 because RGB no RLE
-    os.put( 2 );
+    using Format = Format::WRITE_IN;
+    if ( ( f != Format::NO_RLE ) && ( f != Format::RLE ) ) {
+        throw invalidEnumTYPE( "Error the given format was unknown for this function" );
+    }
+
+    if ( f == Format::NO_RLE ) {
+        // oneByte 3 = 2 because RGB no RLE
+        os.put( 2 );
+    }
+    else {
+        os.put( 10 );
+    }
 
     // oneByte 4,5 = 0
-    os.put( 0 );
-    os.put( 0 );
+    os.put( 0 ).put( 0 );
 
     // oneByte 6,7 = 0
-    os.put( 0 );
-    os.put( 0 );
+    os.put( 0 ).put( 0 );
 
     // oneByte 8 = 0 because no color map
     os.put( 0 );
 
     // oneByte 9,10 = X origin of image (lo-hi)
-    os.put( 0 );
-    os.put( 0 );
+    os.put( 0 ).put( 0 );
 
     // oneByte 11,12 = Y origin of image (lo-hi)
-    os.put( 0 );
-    os.put( 0 );
+    os.put( 0 ).put( 0 );
 
     // oneByte 13,14 = Image width
     os.write( reinterpret_cast<const char*>(&width_), 2 );
@@ -967,11 +947,12 @@ void ColorImage::writeTGA( std::ostream& os, const Format::WRITE_IN ) const {
     // oneByte 17 = 24 because with use Targa 24 bits
     os.put( 24 );
 
+    // TODO Mettre la valeur à 0 pour que l'origine soit en bas à gauche
     // oneByte 18 = {  bits0-3 = 0000 because 24bits,
-    //              bit4 = 0 because reserved,
+    //              bit4 = 0 because the origin is left
     //              bit5 = {0,1} its origin of image (lower left, upper left)
     //              bit6-7 = 00 because the written image is progressive
-    const uint8_t byte18 = 32; // Because image start top left
+    const uint8_t byte18 = 0; // Because image start top left
     os.put( byte18 );
 
     // oneByte 18-size in oneByte 1 = Image identification field, but oneByte 1 = 0 so nothing
@@ -982,14 +963,107 @@ void ColorImage::writeTGA( std::ostream& os, const Format::WRITE_IN ) const {
     /*os.write( reinterpret_cast<const char*>(pixels_.data()),
               static_cast<std::streamsize>(width_ * height_ * sizeof( Color )) );*/
 
-    for ( size_t i = 0; i != static_cast<size_t>(width_ * height_); ++i ) {
-        os.put( pixels_[i].b_ );
-        os.put( pixels_[i].g_ );
-        os.put( pixels_[i].r_ );
+    if ( f == Format::NO_RLE ) {
+        for ( size_t i = 0; i != static_cast<size_t>(width_ * height_); ++i ) {
+            os.put( pixels_[i].r_ );
+            os.put( pixels_[i].g_ );
+            os.put( pixels_[i].b_ );
+        }
     }
+    else {
+        // Cas où l'image est compressée RLE
+        // On distingue le compteur de pixel différent et le compteur d'occurence
+
+        int raw = 0; // Compte le nombre de pixels différents se suivant
+        int occ = 0; // compte le nombre d'occurence de pixels identiques se répétant successivement
+
+        std::vector<Color> swappedPixels( width_ * height_ );
+
+        for ( size_t y = 0; y < height_; ++y ) {
+            for ( size_t x = 0; x < width_; ++x ) {
+                swappedPixels.at( ( y * width_ ) + x ) = pixels_.at( ( ( height_ - 1 - y ) * width_ ) + x );
+            }
+        }
+
+        for ( size_t i = 0; i < ( width_ * height_ ) - 1; i++ ) {
+            // Si le pixel courant est identique au pixel suivant
+            if ( swappedPixels[i] == swappedPixels[i + 1] ) {
+                // On ne code que des paquet compressé contenant 128 pixels
+                // au dela on code un nouveau paquet compressé
+                if ( occ < 128 ) {
+                    occ++;
+                    // si le pixel courant est identique au pixel suivant
+                    // mais différent du pixel précédent.
+                    if ( raw > 0 ) {
+                        os.put( ( raw - 1 ) ); // pour forcer le bit de poids fort à 0
+                        while ( raw > 0 ) {
+                            os.put( swappedPixels[i - raw].b_ );
+                            os.put( swappedPixels[i - raw].g_ );
+                            os.put( swappedPixels[i - raw].r_ );
+                            raw--;
+                        }
+                        raw = 0;
+                    }
+                }
+                else {
+                    // pour ne pas dépasser 128
+                    // on insère le codage des pixels identiques compressés
+                    os.put( ( occ ) | 0x80 );  // pour forcer le bit de poids fort à 1
+                    os.put( swappedPixels[i].b_ );
+                    os.put( swappedPixels[i].g_ );
+                    os.put( swappedPixels[i].r_ );
+                    raw = 0;
+                    occ = 0;
+                }
+            }
+            else {
+                // au dela de 128 pixels différents consécutifs on part sur une nouvelle suite de pixels
+                if ( raw < 128 ) {
+                    raw++;
+
+                    // si le pixel courant est différent du pixel suivant
+                    // mais identique au pixel précédent
+                    if ( occ > 0 ) {
+                        os.put( ( occ ) | 0x80 );  // pour forcer le bit de poids fort à 1
+                        os.put( swappedPixels[i].b_ );
+                        os.put( swappedPixels[i].g_ );
+                        os.put( swappedPixels[i].r_ );
+                        occ = 0;
+                        raw = 0;
+                    }
+                }
+                else {
+                    // pour ne pas dépasser 128
+                    // on insère le codage des pixels différents
+                    // pour recommencer une nouvelle suite de pixels
+                    os.put( ( raw - 1 ) );  // pour forcer le bit de poids fort à 0
+                    while ( raw > 0 ) {
+                        os.put( swappedPixels[i - raw].b_ );
+                        os.put( swappedPixels[i - raw].g_ );
+                        os.put( swappedPixels[i - raw].r_ );
+                        raw--;
+                    }
+                    raw = 0;
+                    occ = 0;
+                }
+            }
+        }
+
+
+    }
+
 
     // No dev or ext fields
     // Maybe add a basic footer
+}
+
+void ColorImage::writeJPEG( const char* output, unsigned int quality ) const {
+    jpeg_compress_struct cinfo;
+
+    jpeg_error_mgr jerr;
+
+    std::string output_str( output );
+    std::ofstream os( output_str, std::ios::binary );
 }
 
 // Readers
@@ -1027,11 +1101,21 @@ ColorImage* ColorImage::readPPM( std::istream& is ) {
     else {
         // type P3
         for ( size_t i = 0; i < ( width * height ); ++i ) {
-            is >> pixels.at( i ).r_ >> pixels.at( i ).g_ >> pixels.at( i ).b_;
+            auto r = 0;
+            auto g = 0;
+            auto b = 0;
+            is >> r >> g >> b;
+
+            pixels.at( i ).r_ = static_cast<Shade>(r);
+            pixels.at( i ).g_ = static_cast<Shade>(g);
+            pixels.at( i ).b_ = static_cast<Shade>(b);
         }
     }
 
-    imageUtils::ASCII::verifyPixels( pixels, intensity );
+    for ( const auto color: pixels ) {
+        VERIFY::verifyColor( color, Color{ intensity, intensity, intensity } );
+    }
+
     imageUtils::skip_ONEwhitespace( is );
 
     imageUtils::verifyStreamContainData( is );
@@ -1056,15 +1140,19 @@ static ColorMap readColorMap( std::istream& is ) {
 
     // TODO Vérification de nbBitsColor {15.16.24.32}
 
+    if ( ( nbBitsColor != 24 ) && ( nbBitsColor != 0 ) ) {
+        throw invalidColor( "Just manage color with 24 bits" );
+    }
+
     return { firstColor, countColor, nbBitsColor };
 }
 
 static bool holdColorMap( std::istream& is ) {
     // Other values than 0 or 1, throw exception
-    uint8_t containeMap = 2;
+    char containeMap = 2;
 
     imageUtils::activateExceptionsOn( is );
-    is.read( reinterpret_cast<char*>(&containeMap), imageUtils::oneByte );
+    is.get( containeMap );
 
     if ( ( containeMap != 0 ) && ( containeMap != 1 ) ) {
         throw invalidColorMapType( "Bad read value of Color Map Type, please verify the given file" );
@@ -1072,8 +1160,6 @@ static bool holdColorMap( std::istream& is ) {
 
     return ( 1 == containeMap );
 }
-
-enum class TargaFormat {};
 
 ColorImage* ColorImage::readTGA( std::istream& is ) {
     /*
@@ -1125,20 +1211,12 @@ ColorImage* ColorImage::readTGA( std::istream& is ) {
     // 1 pour le color mapped non compressé
     // 10 rgb rle
     // 9 color mapped rle
-    if ( type != 2 ) {
-        throw invalidFormat( "Only supported format 2 RGB non compressed" );
+    if ( ( type != 2 ) && ( type != 1 ) ) {
+        throw invalidFormat( "Only supported formats : 1,2" );
     }
 
     // 4 Spec de palette couleur
     const ColorMap colorMap = readColorMap( is );
-
-    if ( containColormap ) {
-        //read
-    }
-    else {
-        // jump to
-    }
-
 
     // 5 Spec Image
     uint16_t originX;
@@ -1165,28 +1243,105 @@ ColorImage* ColorImage::readTGA( std::istream& is ) {
     is.read( reinterpret_cast<char*>(&taille_octet), imageUtils::oneByte );
 
     // Verification de la taille des pixels
-    if ( taille_octet != 24 ) {
-        throw invalidFormat( "Cette fonction ne prend en charge que des pixels de 24bits" );
+    if ( ( taille_octet != 24 ) && ( taille_octet != 8 ) ) {
+        throw invalidFormat( "Cette fonction ne prend en charge que des pixels de 24bits, de 8bits" );
     }
 
     // Verification du byte 17
-    // Classe ByteDescTarga avec des fonctions retournant true ou false en fonction des bits
-    std::bitset<8> desc;
 
     uint8_t descByteImage;
     is.read( reinterpret_cast<char*>(&descByteImage), imageUtils::oneByte );
 
     // Verification de la composition du byte 17
-    if ( descByteImage ^ 0x0 ) {
-        //
+    if ( ( descByteImage & 0b0000'1111 ) != 0 ) {
+        // throw exception only no alpha in 24bits
+    }
+    if ( ( descByteImage & 0b0001'0000 ) != 0 ) {
+        // throw exception only left origin
+    }
+    if ( ( descByteImage & 0b1100'0000 ) != 0 ) {
+        // throw exception on ne gère pas l'entrelacement
     }
 
 
+    // Lecture du champ d'id
+    char* idField = nullptr;
+    if ( sizeIdentificationField > 0 ) {
+        idField = new char[sizeIdentificationField];
+        is.read( reinterpret_cast<char*>(&idField), sizeIdentificationField );
+    }
+
+
+    std::vector<Color> tabColor( colorMap.countColor );
+    if ( containColormap && ( 1 == type ) ) {
+        // lecture de la colormap
+        // Hard fixed to 24bits color
+        is.read( reinterpret_cast<char*>(tabColor.data()),
+                 static_cast<std::streamsize>(colorMap.countColor * sizeof( Color ) ) );
+
+//        std::cout << "Colormap : \n";
+//        for ( size_t i = 0; i < colorMap.countColor; ++i ) {
+//            std::cout << "Color " << i << " : (" << (uint16_t)tabColor[i].r_ << ","
+//            << (uint16_t)tabColor[i].g_ << "," << (uint16_t)tabColor[i].b_ << ")\n";
+//        }
+//        std::cout << "Fin colormap\n";
+    }
+
+
+    std::vector<Color> pixels( width * height );
+    if ( type == 2 ) {
+        is.read( reinterpret_cast<char*>(pixels.data()),
+                 static_cast<std::streamsize>(width * height * sizeof( Color )) );
+        // Origin en haut
+        if ( ( descByteImage & 0b0010'0000 ) == 0b0010'0000 ) {
+            // on swap les lignes
+            std::vector<Color> swappedPixels( width * height );
+
+            for ( size_t y = 0; y < height; ++y ) {
+                for ( size_t x = 0; x < width; ++x ) {
+                    swappedPixels.at( ( y * width ) + x ) = pixels.at( ( ( height - 1 - y ) * width ) + x );
+                }
+            }
+
+            return new ColorImage( width, height, maxIntensity, std::move( swappedPixels ) );
+        }
+        else {
+            return new ColorImage( width, height, maxIntensity, std::move( pixels ) );
+        }
+    }
+    else if ( type == 1 ) {
+        if ( tabColor.empty() ) {
+            throw invalidColorMapType( "Error tab Color is nullptr" );
+        }
+
+        for ( size_t i = 0; i < ( width * height ); ++i ) {
+            uint8_t c = 0;
+            is.read( reinterpret_cast<char*>(&c), 1 );
+
+            pixels.at( i ) = tabColor[static_cast<size_t>(c)];
+        }
+
+        if ( ( descByteImage & 0b0010'0000 ) == 0b0010'0000 ) {
+            // on swap les lignes
+            std::vector<Color> swappedPixels( width * height );
+
+            for ( size_t y = 0; y < height; ++y ) {
+                for ( size_t x = 0; x < width; ++x ) {
+                    swappedPixels.at( ( y * width ) + x ) = pixels.at( ( ( height - 1 - y ) * width ) + x );
+                }
+            }
+
+            return new ColorImage( width, height, maxIntensity, std::move( swappedPixels ) );
+        }
+        else {
+            return new ColorImage( width, height, maxIntensity, std::move( pixels ) );
+        }
+    }
+
     // Les canaux des pixels sont inversés (b,g,r)
-
-
-    return createColorImage( 10, 10, 10 ).release();
 }
+
+
 
 // Scaler
 ColorImage* ColorImage::simpleScale( const intmax_t newWidth, const intmax_t newHeight ) const {

@@ -46,31 +46,36 @@ int main( int argc, char* argv[] ) {
             cout << test << " " << test1 << endl;
         }*/
 
-        ifstream ifimage( "../ressources/chat.pgm", ios::binary );
+        ifstream input( "../ressources/images/chat.tga", ios::binary );
+        auto chat = ColorImage::readTGA( input );
 
-        const auto greay = GrayImage::readPGM_secured( ifimage );
-
-        auto pimg = greay->simpleScale( imageUtils::Dimension<>{823, 400} );
-        auto pbilinear = greay->bilinearScale( imageUtils::Dimension<>{823, 400} );
-
-        ofstream ot1( "..//ressources/ot1.pgm", ios::binary);
-        ofstream ot2( "../ressources/ot2.pgm", ios::binary);
-
-        pimg->writePGM( ot1, Format::WRITE_IN::BINARY );
-        pbilinear->writePGM( ot2, Format::WRITE_IN::BINARY );
-
-        auto grey = GrayImage( imageUtils::Dimension<>{10, 10}, 10);
-        for ( int i = 00; i < 10; i++ ) {
-            grey.drawLine( imageUtils::Point{i,0}, 10, i, imageUtils::TYPE::VERTICAL);
-        }
-
-        grey.drawLine( imageUtils::Point{0,0}, 10, 1, imageUtils::TYPE::HORIZONTAL);
+        ofstream output( "../ressources/chat_out.tga", ios::binary );
+        chat->writeTGA( output, Format::WRITE_IN::NO_RLE );
 
 
-        ofstream out("../ressources/grey.pgm", ios::binary);
-        grey.writePGM( out );
+        ifstream in2( "../ressources/images/palette_bl.tga", ios::binary );
+        ifstream in3( "../ressources/images/palette_tl.tga", ios::binary );
+
+        ofstream ou2( "../ressources/palette_bl_ou.tga", ios::binary );
+        ofstream ou3( "../ressources/palette_tl_ou.tga", ios::binary );
 
 
+        auto plbl = ColorImage::readTGA( in2 );
+        auto pltl = ColorImage::readTGA( in3 );
+
+        plbl->writeTGA( ou2, Format::WRITE_IN::NO_RLE );
+        pltl->writeTGA( ou3, Format::WRITE_IN::NO_RLE );
+
+        signed char c = 10;
+        std::cout << ( ( c & 0b1000'0000 ) == 0b1000'0000 ) << '\n';
+
+        ifstream in5( "../ressources/images/chanel.ppm", ios::binary );
+        auto colour = ColorImage::readPPM( in5 );
+        ofstream ou5( "../ressources/chanel.tga", ios::binary );
+        colour->writeTGA( ou5 );
+
+        ofstream ou6( "../ressources/chanel.ppm", ios::binary );
+        colour->writePPM( ou6 );
 
 
     } // Trois types d'exceptions seront attrapés (les chaines C et C++ ainsi que

@@ -6,7 +6,7 @@
 #define CORR_PPMASCII //P3
 #define CORR_READCOLORJPEG
 #define CORR_WRITECOLORJPEG
-#define CORR_READCOLORTGARLE
+//#define CORR_READCOLORTGARLE
 // #define CORR_BRESENHAM
 // #define CORR_TEMPLATE
 
@@ -1016,10 +1016,6 @@ private:
 // Beta
 inline void ColorImage::writeJPEG( const char* const output ) const { writeJPEG( output, defaultJPEGQuality ); }
 
-inline void ColorImage::writeJPEG( const char* const output, const unsigned int quality ) const {
-    // Do nothing
-}
-
 inline ColorImage* ColorImage::readJPEG( const char* const input ) {
     // Do nothing
     return createColorImage( 10, 10, 10 ).release();
@@ -1033,7 +1029,6 @@ inline ColorImage* ColorImage::readJPEG( const char* const input ) {
 
 // Getters
 inline const Width& GrayImage::getWidth() const noexcept { return dimension.width; }
-
 inline const Height& GrayImage::getHeight() const noexcept { return dimension.height; }
 
 // Fillers
@@ -1064,7 +1059,6 @@ inline void GrayImage::fillRectangle(
 inline GrayImage* GrayImage::simpleScale( const intmax_t newWidth, const intmax_t newHeight ) const {
     return simpleScale( imageUtils::Dimension<>{ newWidth, newHeight } ).release();
 }
-
 inline GrayImage* GrayImage::bilinearScale( const intmax_t newWidth, const intmax_t newHeight ) const {
     return bilinearScale( imageUtils::Dimension<>{ newWidth, newHeight } ).release();
 }
@@ -1078,7 +1072,6 @@ inline GrayImage* GrayImage::readPGM( std::istream& is ) {
 
 // Getters
 inline Width GrayImage::width() const noexcept { return dimension.width; }
-
 inline Height GrayImage::height() const noexcept { return dimension.height; }
 
 
@@ -1113,7 +1106,6 @@ inline void GrayImage::writePGM( std::ostream& os ) const { writePGM( os, Format
 
 // Getters
 inline const Width& ColorImage::getWidth() const noexcept { return width_; }
-
 inline const Height& ColorImage::getHeight() const noexcept { return height_; }
 
 // Fillers
