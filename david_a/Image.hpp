@@ -963,6 +963,16 @@ public:
     /// \exception invalidSizeRepresentationPixel if the END OF STREAM was encountered before the reach width * height pixels
     static ColorImage* readJPEG( const char* input );
 
+    // TODO Faire une méthode qui retourne un unique ptr
+    /// This method create a ColorImage with the format Maison2
+    /// \warning You have the responsibility to manage the return pointer
+    static ColorImage* readMaison2( std::istream& is );
+
+    // TODO REtourner une pointeur safe
+    /// This method create an anaglyphe
+    /// \warning You have the responsiblity to manage the returned pointer
+    ColorImage* anaglyphe() const;
+
     /// Not done
     /// Give two point and one color, and this function draw a right line from point 1 to point 2
     void line( intmax_t x1, intmax_t y1, intmax_t x2, intmax_t y2, Color color );
