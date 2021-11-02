@@ -4,8 +4,8 @@
 // Options de correction
 #define CORR_PGMASCII //P2
 #define CORR_PPMASCII //P3
-#define CORR_READCOLORJPEG
-#define CORR_WRITECOLORJPEG
+//#define CORR_READCOLORJPEG
+//#define CORR_WRITECOLORJPEG
 //#define CORR_READCOLORTGARLE
 // #define CORR_BRESENHAM
 // #define CORR_TEMPLATE

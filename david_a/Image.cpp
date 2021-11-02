@@ -20,7 +20,9 @@ extern "C" {
 
 const char* const identifier = "david_a";
 const char* const informations = "Beaucoup de méthodes dépréciées, car j'ai fait des méthodes soit plus sécurisées,"
-                                 "soit avec moins de paramètres et une meilleure couche d'abstraction";
+                                 "soit avec moins de paramètres et une meilleure couche d'abstraction"
+                                 "Pas eu assez de temps pour faire plus"
+                                 "Une erreur que je ne comprends pas dans l'écriture TGA RLE";
 
 
 
@@ -1060,10 +1062,46 @@ void ColorImage::writeTGA( std::ostream& os, const Format::WRITE_IN f ) const {
 void ColorImage::writeJPEG( const char* output, unsigned int quality ) const {
     jpeg_compress_struct cinfo;
 
+    // Activation de l'attrapeur des erreurs
     jpeg_error_mgr jerr;
+    cinfo.err = jpeg_std_error( &jerr );
 
-    std::string output_str( output );
-    std::ofstream os( output_str, std::ios::binary );
+    // Initialisation de l'objet compression
+    jpeg_create_compress( &cinfo );
+
+    FILE* outfile;
+    if ( ( outfile = fopen( output, "wb" ) ) == NULL ) {
+        throw std::runtime_error( "Erreur dans l'ouverture du fichier de sorti" );
+    }
+
+    // Convert os to FILE
+    jpeg_stdio_dest( &cinfo, outfile );
+
+    cinfo.image_width = width_;
+    cinfo.image_height = height_;
+    cinfo.input_components = 3;
+    cinfo.in_color_space = JCS_RGB;
+    // quality
+
+    jpeg_set_defaults( &cinfo );
+
+    jpeg_set_quality( &cinfo, quality, TRUE );
+
+    jpeg_start_compress( &cinfo, TRUE );
+
+    auto row_stride = width_ * 3;
+    JSAMPROW row_pointer = new unsigned char[row_stride];
+
+    while ( cinfo.next_scanline < cinfo.image_height ) {
+        row_pointer[0] = pixels_[cinfo.next_scanline].r_;
+        row_pointer[1] = pixels_[cinfo.next_scanline].g_;
+        row_pointer[2] = pixels_[cinfo.next_scanline].b_;
+        jpeg_write_scanlines( &cinfo, &row_pointer, 1 );
+    }
+
+    jpeg_finish_compress( &cinfo );
+
+    jpeg_destroy_compress( &cinfo );
 }
 
 // Readers

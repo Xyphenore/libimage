@@ -77,6 +77,13 @@ int main( int argc, char* argv[] ) {
         ofstream ou6( "../ressources/chanel.ppm", ios::binary );
         colour->writePPM( ou6 );
 
+        ifstream in9( "../ressources/images/chat.ppm", ios::binary );
+        auto colourr = ColorImage::readPPM( in9 );
+        colourr->rectangle( 10, 10, 100, 100, { 255, 0, 0 } );
+        colourr->rectangle( 15, 15, 90, 90, { 0, 255, 0 } );
+        colourr->rectangle( 20, 20, 80, 80, { 0, 0, 255 } );
+        colourr->writeJPEG( "../ressources/chat.jpeg", 85 );
+
 
     } // Trois types d'exceptions seront attrapés (les chaines C et C++ ainsi que
         // les std::exception et toutes ses dérivées). N'utilisez pas autre chose !
